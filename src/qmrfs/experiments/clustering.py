@@ -29,7 +29,8 @@ def evaluate_clustering(features, y, seed: int, num_reps: int = 20):
     return np.mean(scores), np.std(scores)
 
 
-def run_clustering_experiment(tolerance: float, seed: int, verbose: bool = False):
+def run_clustering_experiment(tolerance: float, sorting_strategy: qmrfs.SortingStrategy, seed: int,
+                              feature_order_seed: int = None, verbose: bool = False):
     if verbose:
         print("Clustering evaluation")
     rel_scores = dict()
@@ -40,26 +41,28 @@ def run_clustering_experiment(tolerance: float, seed: int, verbose: bool = False
             print(f"Running clustering for dataset {dataset}")
         X_data, X_orig, y = load_dataset(info.uci_id)
         start = time.perf_counter()
-        pruned_x = qmrfs.qmr_fs(X_data, tolerance=tolerance)
+        pruned_x = qmrfs.qmr_fs(X_data, tolerance=tolerance, sorting_strategy=sorting_strategy, seed=feature_order_seed)
         duration = time.perf_counter() - start
 
         full_score, full_score_std = evaluate_clustering(X_data, y, seed=seed)
         red_score, red_score_std = evaluate_clustering(pruned_x, y, seed=seed)
 
         abs_scores.append({
-                "ref_val": DATASET_INFO[dataset].acc_ref,
-                "full_mean": full_score,
-                "full_std": full_score_std,
-                "red_mean": red_score,
-                "red_std": red_score_std,
-                "rel_score": red_score / full_score,
-                "full_dim": X_data.shape[1],
-                "red_dim": pruned_x.shape[1],
-                "dim_ratio": pruned_x.shape[1] / X_data.shape[1],
-                "duration": duration,
-                "tolerance": tolerance,
-                "dataset": dataset
-            }
+            "ref_val": DATASET_INFO[dataset].acc_ref,
+            "full_mean": full_score,
+            "full_std": full_score_std,
+            "red_mean": red_score,
+            "red_std": red_score_std,
+            "rel_score": red_score / full_score,
+            "full_dim": X_data.shape[1],
+            "red_dim": pruned_x.shape[1],
+            "dim_ratio": pruned_x.shape[1] / X_data.shape[1],
+            "duration": duration,
+            "tolerance": tolerance,
+            "dataset": dataset,
+            "sorting_strategy": sorting_strategy,
+            "feature_order_seed": feature_order_seed
+        }
         )
 
         rel_scores[dataset] = red_score / full_score

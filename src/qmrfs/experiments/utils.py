@@ -1,8 +1,14 @@
+import os
 import dataclasses as dc
 from typing import Optional
+
+import numpy as np
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from ucimlrepo import fetch_ucirepo
+
+DATA_CACHE_LOCATION = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'datasets'))
 
 
 @dc.dataclass(frozen=True)
@@ -108,21 +114,33 @@ def load_clustering_results(use_ratio: bool):
     return df
 
 
-if __name__ == "__main__":
-    print(load_clustering_results(True))
-
-
-def get_features_and_targets(dataset):
+def get_features_and_targets(dataset) -> (np.ndarray, pd.DataFrame, np.ndarray):
     cat_cols = {col: "category" for col in dataset.variables.loc[
         (dataset.variables["type"].isin({"Binary", "Categorical"})) & (dataset.variables["role"] == "Feature")][
         "name"].tolist()}
     X_orig = dataset.data.features.astype(cat_cols)
-    y = dataset.data.targets
+    y, _ = pd.factorize(dataset.data.targets.squeeze())
     X_data = pd.get_dummies(X_orig).astype(float)
     X_data = SimpleImputer().fit_transform(X_data)
-    return X_data, X_orig, y.squeeze().to_numpy()
+    return X_data, X_orig, y
 
 
-def load_dataset(dataset_id: int):
-    dataset = fetch_ucirepo(id=dataset_id)
-    return get_features_and_targets(dataset)
+def load_dataset(dataset_id: int, use_cache: bool = True):
+    cache_folder = os.path.join(DATA_CACHE_LOCATION, str(dataset_id))
+    if use_cache and os.path.exists(cache_folder) and len(os.listdir(cache_folder)) > 0:
+        X_data = np.load(os.path.join(cache_folder, "preprocessed_data.npy"))
+        X_orig = pd.read_json(os.path.join(cache_folder, "original_data.json"), orient='split')
+        y = np.load(os.path.join(cache_folder, "targets.npy"))
+    else:
+        dataset = fetch_ucirepo(id=dataset_id)
+        X_data, X_orig, y = get_features_and_targets(dataset)
+        if use_cache:
+            os.makedirs(cache_folder, exist_ok=True)
+            np.save(os.path.join(cache_folder, "preprocessed_data.npy"), X_data)
+            X_orig.to_json(os.path.join(cache_folder, "original_data.json"), orient='split')
+            np.save(os.path.join(cache_folder, "targets.npy"), y)
+    return X_data, X_orig, y
+
+#
+# if __name__ == "__main__":
+#     print(load_clustering_results(True))

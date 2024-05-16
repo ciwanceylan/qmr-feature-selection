@@ -1,4 +1,6 @@
+import numpy as np
 import torch
+import numba as nb
 
 
 def switch_rows(matrix, row1, row2):
@@ -74,3 +76,43 @@ def get_keep_columns_qr(features: torch.Tensor, tolerance: float):
         columns_to_keep = get_pivot_columns(rref)
 
     return columns_to_keep
+
+
+@nb.jit(nb.types.Tuple((nb.int64[::1], nb.float32[::1]))(nb.float32[:, :]), nopython=True, nogil=True, parallel=True)
+def count_unique_f32(features: np.ndarray):
+    num_dims = features.shape[1]
+    num_unique = np.empty((num_dims,), dtype=np.int64)
+    entropy = np.empty((num_dims,), dtype=np.float32)
+    for i in nb.prange(num_dims):
+        unique_vals = np.unique(features[:, i])
+        num_unique_ = len(unique_vals)
+        if num_unique_ < 6:
+            entropy_ = 0.
+            for j in range(num_unique_):
+                p = 1. / np.sum(features[:, i] == unique_vals[j])
+                entropy_ -= p * np.log(p)
+            entropy[i] = entropy_
+        else:
+            entropy[i] = 0.5 * np.log(2 * np.pi * np.e)
+        num_unique[i] = num_unique_
+    return num_unique, entropy
+
+
+@nb.jit(nb.types.Tuple((nb.int64[::1], nb.float64[::1]))(nb.float32[:, :]), nopython=True, nogil=True, parallel=True)
+def count_unique_f64(features: np.ndarray):
+    num_dims = features.shape[1]
+    num_unique = np.empty((num_dims,), dtype=np.int64)
+    entropy = np.empty((num_dims,), dtype=np.float64)
+    for i in nb.prange(num_dims):
+        unique_vals = np.unique(features[:, i])
+        num_unique_ = len(unique_vals)
+        if num_unique_ < 6:
+            entropy_ = 0.
+            for j in range(num_unique_):
+                p = 1. / np.sum(features[:, i] == unique_vals[j])
+                entropy_ -= p * np.log(p)
+            entropy[i] = entropy_
+        else:
+            entropy[i] = 0.5 * np.log(2 * np.pi * np.e)
+        num_unique[i] = num_unique_
+    return num_unique, entropy

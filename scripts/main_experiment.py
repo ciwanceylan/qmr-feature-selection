@@ -5,11 +5,12 @@ from qmrfs.experiments.classification import run_classification_experiment
 from qmrfs.experiments.clustering import run_clustering_experiment
 
 
-def main_classification(tolerance: float, seed: int):
+def main_classification(tolerance: float, sorting_strategy, seed: int, feature_order_seed: int):
     folder = "results/data/main_experiment/classification"
     os.makedirs(folder, exist_ok=True)
 
-    abs_results, rel_results = run_classification_experiment(tolerance=tolerance, seed=seed)
+    abs_results, rel_results = run_classification_experiment(tolerance=tolerance, sorting_strategy=sorting_strategy,
+                                                             seed=seed, feature_order_seed=feature_order_seed)
     full_rel_df = load_classification_results(use_ratio=True)
     full_rel_df.loc["qmr"] = rel_results
 
@@ -22,11 +23,12 @@ def main_classification(tolerance: float, seed: int):
     abs_results.to_json(os.path.join(folder, "full_data.json"), orient='records', indent=2)
 
 
-def main_clustering(tolerance: float, seed: int):
+def main_clustering(tolerance: float, sorting_strategy, seed: int, feature_order_seed: int):
     folder = "results/data/main_experiment/clustering"
     os.makedirs(folder, exist_ok=True)
 
-    abs_results, rel_results = run_clustering_experiment(tolerance=tolerance, seed=seed)
+    abs_results, rel_results = run_clustering_experiment(tolerance=tolerance, sorting_strategy=sorting_strategy,
+                                                         seed=seed, feature_order_seed=feature_order_seed)
     full_rel_df = load_clustering_results(use_ratio=True)
     full_rel_df.loc["qmr"] = rel_results
 
