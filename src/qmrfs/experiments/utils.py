@@ -119,7 +119,10 @@ def get_features_and_targets(dataset) -> (np.ndarray, pd.DataFrame, np.ndarray):
         (dataset.variables["type"].isin({"Binary", "Categorical"})) & (dataset.variables["role"] == "Feature")][
         "name"].tolist()}
     X_orig = dataset.data.features.astype(cat_cols)
-    y, _ = pd.factorize(dataset.data.targets.squeeze())
+    if dataset.data.targets is not None:
+        y, _ = pd.factorize(dataset.data.targets.squeeze())
+    else:
+        y = np.asarray([])
     X_data = pd.get_dummies(X_orig).astype(float)
     X_data = SimpleImputer().fit_transform(X_data)
     return X_data, X_orig, y

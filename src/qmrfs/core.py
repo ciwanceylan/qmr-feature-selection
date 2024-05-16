@@ -32,15 +32,18 @@ def is_independent(pivot_norm: float, feature_norm: float, theta: float, num_can
 def qr2ref_with_M(features: torch.Tensor, theta: float):
     device = features.device
     dtype = features.dtype
+    recon_errors = []
+    feature_norms = []
+
     Q, Rref = torch.linalg.qr(features, mode='reduced')
     num_rows = Rref.shape[0]
-    # Q = np.ascontiguousarray(Q)
     M = torch.eye(Rref.shape[0], dtype=Rref.dtype, device=device)
     pivot_row = 0
     for col in range(Rref.shape[1]):
         pivot_norm = calc_pivot_norm(Q, M, Rref, pivot_row, col)
         pivot_candidates_ = Rref[pivot_row:col + 1, col]
-        if is_independent(pivot_norm, torch.linalg.norm(features[:, col]), theta, len(pivot_candidates_), dtype):
+        feature_norm = torch.linalg.norm(features[:, col])
+        if is_independent(pivot_norm, feature_norm, theta, len(pivot_candidates_), dtype):
             pivot_index = torch.argmax(torch.abs(pivot_candidates_))
             new_pivot_row = pivot_index + pivot_row
             # Switch place to that largest element is at the pivot row
@@ -52,9 +55,13 @@ def qr2ref_with_M(features: torch.Tensor, theta: float):
             M[:, pivot_row] += torch.einsum('ij,j->i', M[:, pivot_row + 1:min(col + 1, num_rows)], reduction_ratios)
 
             pivot_row += 1
+        else:
+            recon_errors.append(pivot_norm.item())
+            feature_norms.append(feature_norm.item())
         # Set small elements to zeros
         Rref[pivot_row:, col] = torch.zeros(Rref.shape[0] - pivot_row, dtype=dtype, device=device)
-    return Rref, M
+
+    return Rref, M, recon_errors, feature_norms
 
 
 def get_pivot_columns(matrix: torch.Tensor):
@@ -71,48 +78,52 @@ def get_pivot_columns(matrix: torch.Tensor):
 def get_keep_columns_qr(features: torch.Tensor, tolerance: float):
     if tolerance < 0:
         columns_to_keep = torch.ones(features.shape[1], dtype=torch.bool, device=features.device)
+        recon_errors = []
+        feature_norms = []
     else:
-        rref, M = qr2ref_with_M(features, theta=tolerance)
+        rref, M, recon_errors, feature_norms = qr2ref_with_M(features, theta=tolerance)
         columns_to_keep = get_pivot_columns(rref)
 
-    return columns_to_keep
+    return columns_to_keep, recon_errors, feature_norms
 
 
 @nb.jit(nb.types.Tuple((nb.int64[::1], nb.float32[::1]))(nb.float32[:, :]), nopython=True, nogil=True, parallel=True)
 def count_unique_f32(features: np.ndarray):
-    num_dims = features.shape[1]
+    num_instances, num_dims = features.shape
     num_unique = np.empty((num_dims,), dtype=np.int64)
     entropy = np.empty((num_dims,), dtype=np.float32)
     for i in nb.prange(num_dims):
         unique_vals = np.unique(features[:, i])
         num_unique_ = len(unique_vals)
-        if num_unique_ < 6:
+        if num_unique_ < 10:
             entropy_ = 0.
             for j in range(num_unique_):
-                p = 1. / np.sum(features[:, i] == unique_vals[j])
+                p = np.sum(features[:, i] == unique_vals[j]) / num_instances
                 entropy_ -= p * np.log(p)
             entropy[i] = entropy_
         else:
-            entropy[i] = 0.5 * np.log(2 * np.pi * np.e)
+            # Approximation of continuous values
+            entropy[i] = np.log(num_unique_)
         num_unique[i] = num_unique_
     return num_unique, entropy
 
 
 @nb.jit(nb.types.Tuple((nb.int64[::1], nb.float64[::1]))(nb.float32[:, :]), nopython=True, nogil=True, parallel=True)
 def count_unique_f64(features: np.ndarray):
-    num_dims = features.shape[1]
+    num_instances, num_dims = features.shape
     num_unique = np.empty((num_dims,), dtype=np.int64)
     entropy = np.empty((num_dims,), dtype=np.float64)
     for i in nb.prange(num_dims):
         unique_vals = np.unique(features[:, i])
         num_unique_ = len(unique_vals)
-        if num_unique_ < 6:
+        if num_unique_ < 10:
             entropy_ = 0.
             for j in range(num_unique_):
-                p = 1. / np.sum(features[:, i] == unique_vals[j])
+                p = np.sum(features[:, i] == unique_vals[j]) / num_instances
                 entropy_ -= p * np.log(p)
             entropy[i] = entropy_
         else:
-            entropy[i] = 0.5 * np.log(2 * np.pi * np.e)
+            # Approximation of continuous values
+            entropy[i] = np.log(num_unique_)
         num_unique[i] = num_unique_
     return num_unique, entropy

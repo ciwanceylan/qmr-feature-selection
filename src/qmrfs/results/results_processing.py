@@ -53,10 +53,10 @@ def save_all_formats(figure: plt.Figure, save_path: str):
     figure.savefig(os.path.join(save_dir_pdf, f"{name}.pdf"))
 
 
-def lineplot(pltdata, x: str, y: str,
+def lineplot(pltdata, *, x: str, y: str,
              x_label: str = None, y_label: str = None,
              x_lim: tuple[float, float] = None, y_lim: tuple[float, float] = None,
-             x_scale: str = None, y_scale: str = None, hue=None,
+             x_scale: str = None, y_scale: str = None, hue=None, errorbar,
              save_path: str = None, fontsize: int = 32, fontsize_legend: int = 26):
     setup_matplotlib(fontsize=fontsize, fontsize_legend=fontsize_legend)
     if x_label is None:
@@ -65,7 +65,40 @@ def lineplot(pltdata, x: str, y: str,
         y_label = y
 
     fig, ax = plt.subplots()
-    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=("ci", 95))
+    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar)
+    ax.set_xlabel(x_label, fontdict={'fontsize': int(1.1 * fontsize)})
+    ax.set_ylabel(y_label, fontdict={'fontsize': int(1.1 * fontsize)})
+    if x_scale is not None:
+        ax.set_xscale('log', base=2) if x_scale == "log2" else ax.set_xscale(x_scale)
+    if y_scale is not None:
+        ax.set_yscale('log', base=2) if y_scale == "log2" else ax.set_yscale(y_scale)
+    if x_lim is not None:
+        ax.set_xlim(x_lim)
+    if y_lim is not None:
+        ax.set_ylim(y_lim)
+
+    lgd_obj = ax.legend()
+    lgd_obj.set_title(None)
+
+    if save_path is not None:
+        save_all_formats(fig, save_path)
+
+    return fig, ax
+
+
+def scatterplot(pltdata, x: str, y: str,
+                x_label: str = None, y_label: str = None,
+                x_lim: tuple[float, float] = None, y_lim: tuple[float, float] = None,
+                x_scale: str = None, y_scale: str = None, hue=None,
+                save_path: str = None, fontsize: int = 32, fontsize_legend: int = 26):
+    setup_matplotlib(fontsize=fontsize, fontsize_legend=fontsize_legend)
+    if x_label is None:
+        x_label = x
+    if y_label is None:
+        y_label = y
+
+    fig, ax = plt.subplots()
+    sns.scatterplot(data=pltdata, x=x, y=y, hue=hue, style=hue)
     ax.set_xlabel(x_label, fontdict={'fontsize': int(1.1 * fontsize)})
     ax.set_ylabel(y_label, fontdict={'fontsize': int(1.1 * fontsize)})
     if x_scale is not None:

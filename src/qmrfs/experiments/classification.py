@@ -1,3 +1,4 @@
+from typing import Optional
 import time
 
 import numpy as np
@@ -5,6 +6,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.svm import LinearSVC
+import tqdm
 
 from qmrfs import qmr_feature_selection as qmrfs
 from qmrfs.experiments.utils import DATASET_INFO, load_dataset
@@ -32,19 +34,29 @@ def evaluate_clf(features, y, seed: int):
 
 
 def run_classification_experiment(tolerance: float, sorting_strategy: qmrfs.SortingStrategy, seed: int,
-                                  feature_order_seed: int = None, verbose: bool = False):
+                                  feature_order_seed: Optional[int] = None, verbose: bool = False):
     if verbose:
         print("Classification evaluation")
     rel_scores = dict()
     abs_scores = []
 
-    for dataset, info in DATASET_INFO.items():
+    for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
         if verbose:
             print(f"Running classification for dataset {dataset}")
         X_data, X_orig, y = load_dataset(info.uci_id)
         start = time.perf_counter()
-        pruned_x = qmrfs.qmr_fs(X_data, tolerance=tolerance, sorting_strategy=sorting_strategy, seed=feature_order_seed)
+        pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
+            X_data,
+            tolerance=tolerance,
+            sorting_strategy=sorting_strategy,
+            seed=feature_order_seed
+        )
         duration = time.perf_counter() - start
+
+        total_error = np.sqrt(np.power(recon_errors, 2).sum()).item()
+        total_feature_norm = np.sqrt(np.power(feature_norms, 2).sum()).item()
+        total_rel_error = total_error / total_feature_norm if total_feature_norm > 0.0 else 0.0
+        max_rel_error = np.max(recon_errors / feature_norms).item() if len(recon_errors) > 0 else 0.0
 
         full_score, full_score_std = evaluate_clf(X_data, y, seed=seed)
         red_score, red_score_std = evaluate_clf(pruned_x, y, seed=seed)
@@ -63,9 +75,12 @@ def run_classification_experiment(tolerance: float, sorting_strategy: qmrfs.Sort
             "tolerance": tolerance,
             "dataset": dataset,
             "sorting_strategy": sorting_strategy,
-            "feature_order_seed": feature_order_seed
-        }
-        )
+            "feature_order_seed": feature_order_seed,
+            "total_error": total_error,
+            "total_feature_norm": total_feature_norm,
+            "total_rel_error": total_rel_error,
+            "max_rel_error": max_rel_error
+        })
 
         rel_scores[dataset] = red_score / full_score
 

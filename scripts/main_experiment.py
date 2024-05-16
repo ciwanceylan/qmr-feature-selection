@@ -1,3 +1,4 @@
+from typing import Optional
 import os
 
 from qmrfs.experiments.utils import load_classification_results, load_clustering_results
@@ -5,8 +6,8 @@ from qmrfs.experiments.classification import run_classification_experiment
 from qmrfs.experiments.clustering import run_clustering_experiment
 
 
-def main_classification(tolerance: float, sorting_strategy, seed: int, feature_order_seed: int):
-    folder = "results/data/main_experiment/classification"
+def main_classification(tolerance: float, sorting_strategy, seed: int, feature_order_seed: Optional[int]):
+    folder = f"results/data/main_experiment/classification/{sorting_strategy}_{tolerance:.2e}".replace('.', '-')
     os.makedirs(folder, exist_ok=True)
 
     abs_results, rel_results = run_classification_experiment(tolerance=tolerance, sorting_strategy=sorting_strategy,
@@ -23,8 +24,8 @@ def main_classification(tolerance: float, sorting_strategy, seed: int, feature_o
     abs_results.to_json(os.path.join(folder, "full_data.json"), orient='records', indent=2)
 
 
-def main_clustering(tolerance: float, sorting_strategy, seed: int, feature_order_seed: int):
-    folder = "results/data/main_experiment/clustering"
+def main_clustering(tolerance: float, sorting_strategy, seed: int, feature_order_seed: Optional[int]):
+    folder = f"results/data/main_experiment/clustering/{sorting_strategy}_{tolerance:.2e}".replace('.', '-')
     os.makedirs(folder, exist_ok=True)
 
     abs_results, rel_results = run_clustering_experiment(tolerance=tolerance, sorting_strategy=sorting_strategy,
@@ -44,5 +45,9 @@ def main_clustering(tolerance: float, sorting_strategy, seed: int, feature_order
 if __name__ == "__main__":
     tolerance = 1e-1
     seed = 6342312
-    main_classification(tolerance=tolerance, seed=seed)
-    main_clustering(tolerance=tolerance, seed=seed)
+    main_classification(tolerance=tolerance, sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None)
+    main_clustering(tolerance=tolerance, sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None)
+
+    tolerance = 0.0
+    main_classification(tolerance=tolerance, sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None)
+    main_clustering(tolerance=tolerance, sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None)
