@@ -14,6 +14,12 @@ def load_us_census():
     return utils.load_dataset(dataset_id=116)
 
 
+def load_snap_patents():
+    X_data = np.load("datasets/snap_patents/snap_patents.npy")
+    y = np.array([])
+    return X_data, y
+
+
 def load_musae_git(as_dense: bool):
     targets = pd.read_csv("datasets/musae_git/musae_git_target.csv", index_col=0)
     y = targets['ml_target'].to_numpy()
