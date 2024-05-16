@@ -101,31 +101,60 @@ def load_kddcup1999():
 
 
 def time_fs(X_data, device: Optional[torch.device]):
-    start = time.perf_counter()
-    pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
-        X_data,
-        tolerance=1e-1,
-        sorting_strategy='entropy_high2low',
-        seed=None,
-        device=device
-    )
-    duration = time.perf_counter() - start
+    durations = []
+    for _ in range(10):
+        start = time.perf_counter()
+        pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
+            X_data,
+            tolerance=1e-1,
+            sorting_strategy='entropy_high2low',
+            seed=None,
+            device=device
+        )
+        duration = time.perf_counter() - start
+        durations.append(duration)
+
     num_kept_features = pruned_x.shape[1]
-    return duration, num_kept_features
+    return durations, num_kept_features
 
 
-def main():
-    # X_data, y = load_musae_git(as_dense=True)
-    X_data, y = load_kddcup1999()
-    # X_data, X_orig, y = load_us_census()
+def main(dataset: str, device: str):
+    if dataset == "musae_git":
+        X_data, y = load_musae_git(as_dense=True)
+    elif dataset == "kddcup99":
+        X_data, y = load_kddcup1999()
+    elif dataset == "us_census":
+        X_data, _, y = load_us_census()
+    elif dataset == "snap_patents":
+        X_data, y = load_snap_patents()
+    else:
+        raise NotImplementedError
 
     n, m = X_data.shape
+
+    durations, num_kept_features = time_fs(X_data, device=torch.device(device))
+    print("Dataset: ", dataset)
+    print("Device: ", device)
     print("Num. instances: ", n)
     print("Num. features: ", m)
-    duration, num_kept_features = time_fs(X_data, device=torch.device('cuda'))
-    print("Duration: ", duration)
     print("Num end dim.: ", num_kept_features)
+    print("Avg. duration: ", np.mean(durations))
+    print("Std. duration: ", np.std(durations))
+    print("Median duration: ", np.median(durations))
+    print("Max duration: ", np.max(durations))
+    print("Min duration: ", np.min(durations))
+    print()
 
 
 if __name__ == "__main__":
-    main()
+    main("us_census", 'cpu')
+    main("us_census", 'cuda')
+
+    main("musae_git", 'cpu')
+    main("musae_git", 'cuda')
+
+    main("kddcup99", 'cpu')
+    main("kddcup99", 'cuda')
+
+    main("snap_patents", 'cpu')
+    main("snap_patents", 'cuda')
