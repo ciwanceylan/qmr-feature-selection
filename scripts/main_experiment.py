@@ -11,9 +11,9 @@ def main_classification(tolerance: Union[float, Literal['auto']], sorting_strate
                         feature_order_seed: Optional[int], use_factorize_categorical: bool,
                         feature_translation: TranslationMode):
     if use_factorize_categorical:
-        folder = f"results/data/main_experiment/factorize/classification/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/main_experiment/factorize/classification/{feature_translation}/{sorting_strategy}"
     else:
-        folder = f"results/data/main_experiment/dummy/classification/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/main_experiment/dummy/classification/{feature_translation}/{sorting_strategy}"
     if tolerance == 'auto':
         folder += "_auto"
     else:
@@ -40,9 +40,9 @@ def main_clustering(tolerance: Union[float, Literal['auto']], sorting_strategy, 
                     feature_order_seed: Optional[int], use_factorize_categorical: bool,
                     feature_translation: TranslationMode):
     if use_factorize_categorical:
-        folder = f"results/data/main_experiment/factorize/clustering/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/main_experiment/factorize/clustering/{feature_translation}/{sorting_strategy}"
     else:
-        folder = f"results/data/main_experiment/dummy/clustering/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/main_experiment/dummy/clustering/{feature_translation}/{sorting_strategy}"
     if tolerance == 'auto':
         folder += "_auto"
     else:

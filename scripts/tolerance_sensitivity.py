@@ -12,9 +12,9 @@ from qmrfs.qmr_feature_selection import TranslationMode
 def main_classification(*, sorting_strategy, seed: int, feature_order_seed: Optional[int],
                         use_factorize_categorical: bool, feature_translation: TranslationMode):
     if use_factorize_categorical:
-        folder = f"results/data/tol_sens/factorize/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/tol_sens/factorize/{feature_translation}/{sorting_strategy}"
     else:
-        folder = f"results/data/tol_sens/dummy/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/tol_sens/dummy/{feature_translation}/{sorting_strategy}"
 
     if 'random' in sorting_strategy:
         folder += f"_{feature_order_seed}"
@@ -37,9 +37,9 @@ def main_classification(*, sorting_strategy, seed: int, feature_order_seed: Opti
 def main_clustering(*, sorting_strategy, seed: int, feature_order_seed: Optional[int],
                     use_factorize_categorical: bool, feature_translation: TranslationMode):
     if use_factorize_categorical:
-        folder = f"results/data/tol_sens/factorize/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/tol_sens/factorize/{feature_translation}/{sorting_strategy}"
     else:
-        folder = f"results/data/tol_sens/dummy/{sorting_strategy}/{feature_translation}"
+        folder = f"results/data/tol_sens/dummy/{feature_translation}/{sorting_strategy}"
 
     if 'random' in sorting_strategy:
         folder += f"_{feature_order_seed}"

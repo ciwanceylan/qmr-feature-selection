@@ -131,22 +131,22 @@ if __name__ == "__main__":
 
     for translate_mode in ['none', 'centre', 'non-negative']:
         for cat_pp_mode in ['factorize', 'dummy']:
-            plot_tol_sens_sorting('classification', cat_pp_mode=cat_pp_mode,
+            plot_tol_sens_sorting('classification', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
                                   sorting_strategies={'entropy_high2low', 'random', 'default'})
-            plot_tol_sens_sorting('clustering', cat_pp_mode=cat_pp_mode,
+            plot_tol_sens_sorting('clustering', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
                                   sorting_strategies={'entropy_high2low', 'random', 'default'})
 
             # plot_tol_sens_single_sorting_model('clustering', sorting_model='entropy_low2high', exclude_datasets={'sonar'})
 
             plot_tol_sens_single_sorting_model(
                 'classification', sorting_model='entropy_high2low',
-                cat_pp_mode=cat_pp_mode,
+                cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
                 exclude_datasets=None
             )
 
             plot_tol_sens_single_sorting_model(
                 'clustering', sorting_model='entropy_high2low',
-                cat_pp_mode=cat_pp_mode,
+                cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
                 exclude_datasets=None
             )
 
