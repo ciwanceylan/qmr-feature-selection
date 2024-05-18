@@ -16,6 +16,26 @@ def load_tol_sens_data(mode: Literal['classification', 'clustering'], cat_pp_mod
     return results
 
 
+def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'],
+                                    cat_pp_mode: Literal['factorize', 'dummy']):
+    data = pd.read_json(f"./results/data/main_experiment/{cat_pp_mode}/{mode}.json")
+    data['method'] = data['method'].map(lambda x: x[0] if isinstance(x, list) else x)
+
+    y = "accuracy" if mode == "classification" else "nmi"
+    y_label = "Accuracy" if mode == "classification" else "NMI"
+
+    datasets = data["dataset"].unique()
+    for dataset_name in datasets:
+        save_folder = f"results/figures/comparison/{cat_pp_mode}/{dataset_name}/"
+        plt_data = data.loc[data["dataset"] == dataset_name]
+
+        resproc.lineplot(
+            plt_data, x="dim_ratio", x_label=r"Dim. ratio", y=y, y_label=y_label,
+            hue="method", errorbar="sd",
+            save_path=os.path.join(save_folder, mode)
+        )
+
+
 def plot_tol_sens_single_sorting_model(mode: Literal['classification', 'clustering'],
                                        cat_pp_mode: Literal['factorize', 'dummy'],
                                        sorting_model: SortingStrategy,
@@ -123,32 +143,37 @@ def plot_tol_sens_sorting(
 
 
 if __name__ == "__main__":
+    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize')
+    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize')
+    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='dummy')
+    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='dummy')
+
     # resproc.make_comparison_table("classification")
     # resproc.make_comparison_table("clustering")
     # resproc.make_full_res_table()
 
     # plot_tolerance_sensitivity()
 
-    for translate_mode in ['none', 'centre', 'non-negative']:
-        for cat_pp_mode in ['factorize', 'dummy']:
-            plot_tol_sens_sorting('classification', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-                                  sorting_strategies={'entropy_high2low', 'random', 'default'})
-            plot_tol_sens_sorting('clustering', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-                                  sorting_strategies={'entropy_high2low', 'random', 'default'})
-
-            # plot_tol_sens_single_sorting_model('clustering', sorting_model='entropy_low2high', exclude_datasets={'sonar'})
-
-            plot_tol_sens_single_sorting_model(
-                'classification', sorting_model='entropy_high2low',
-                cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-                exclude_datasets=None
-            )
-
-            plot_tol_sens_single_sorting_model(
-                'clustering', sorting_model='entropy_high2low',
-                cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-                exclude_datasets=None
-            )
+    # for translate_mode in ['none', 'centre', 'non-negative']:
+    #     for cat_pp_mode in ['factorize', 'dummy']:
+    #         plot_tol_sens_sorting('classification', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
+    #                               sorting_strategies={'entropy_high2low', 'random', 'default'})
+    #         plot_tol_sens_sorting('clustering', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
+    #                               sorting_strategies={'entropy_high2low', 'random', 'default'})
+    #
+    #         # plot_tol_sens_single_sorting_model('clustering', sorting_model='entropy_low2high', exclude_datasets={'sonar'})
+    #
+    #         plot_tol_sens_single_sorting_model(
+    #             'classification', sorting_model='entropy_high2low',
+    #             cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
+    #             exclude_datasets=None
+    #         )
+    #
+    #         plot_tol_sens_single_sorting_model(
+    #             'clustering', sorting_model='entropy_high2low',
+    #             cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
+    #             exclude_datasets=None
+    #         )
 
     #
     # plot_tol_sens_single_sorting_model(

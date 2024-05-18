@@ -1,36 +1,45 @@
-from typing import Optional, Union, Literal, Callable
+from typing import Optional, Union, Literal, List, Dict
 import time
+import os
+import warnings
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.svm import LinearSVC
+from scipy.io import loadmat
 import tqdm
+import glob
 
 from qmrfs import qmr_feature_selection as qmrfs
 from qmrfs.experiments.utils import DATASET_INFO, load_dataset, DATASET2THETA
 
 
-def evaluate_clf(features, y, seed: int):
-    kf = KFold(n_splits=5, shuffle=True, random_state=seed)
-    clf = LinearSVC(dual='auto')
+def evaluate_clf(features, y, num_reps: int, seed: int):
     f_mean = features.mean(axis=0, keepdims=True)
     f_std = features.std(axis=0, keepdims=True)
     f_std[f_std == 0] = 1.
     features_std = (features - f_mean) / f_std
 
+    seeds = np.random.SeedSequence(seed).generate_state(num_reps)
     scores = []
 
-    for i, (train_index, test_index) in enumerate(kf.split(features_std)):
-        train_x, train_y = features_std[train_index], y[train_index]
-        test_x, test_y = features_std[test_index], y[test_index]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for i, seed_ in enumerate(seeds):
+            kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed_)
+            clf = LinearSVC(dual='auto')
 
-        clf = clf.fit(train_x, train_y)
-        pred_y = clf.predict(test_x)
-        score = accuracy_score(test_y, pred_y)
-        scores.append(score)
-    return np.mean(scores), np.std(scores)
+            for j, (train_index, test_index) in enumerate(kf.split(features_std, y=y)):
+                train_x, train_y = features_std[train_index], y[train_index]
+                test_x, test_y = features_std[test_index], y[test_index]
+
+                clf = clf.fit(train_x, train_y)
+                pred_y = clf.predict(test_x)
+                score = accuracy_score(test_y, pred_y)
+                scores.append({"accuracy": score, "seed": seed_, "split": j})
+    return scores
 
 
 def run_classification_experiment(tolerance: Union[float, Literal['auto']], sorting_strategy: qmrfs.SortingStrategy,
@@ -89,3 +98,66 @@ def run_classification_experiment(tolerance: Union[float, Literal['auto']], sort
         rel_scores[dataset] = red_score / full_score
 
     return pd.DataFrame(abs_scores), pd.Series(rel_scores)
+
+
+def enrich_scores(scores: List[Dict], kwargs: Dict):
+    for score in scores:
+        score.update(kwargs)
+    return scores
+
+
+def run_classification_evaluation_on_precomputed_features(
+        *,
+        num_reps: int = 5,
+        seed: int,
+        use_factorize_categorical: bool,
+        verbose: bool = False
+):
+    if verbose:
+        print("Clustering evaluation")
+    all_scores = []
+    mode = "factorize" if use_factorize_categorical else "dummy"
+
+    for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
+        if verbose:
+            print(f"Running clustering for dataset {dataset}")
+        X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
+        full_dims = X_data.shape[1]
+
+        scores = evaluate_clf(X_data, y, seed=seed, num_reps=num_reps)
+        scores = enrich_scores(
+            scores,
+            kwargs={
+                "dataset": dataset,
+                "method": "baseline_full",
+                "duration": 0.0,
+                "dim_ratio": 1.0,
+                "full_dim": full_dims,
+                "red_dim": full_dims
+            }
+        )
+        all_scores += scores
+        for mat_file_path in tqdm.tqdm(glob.glob(f"baseline_features/{info.uci_id}/{mode}/*/*.mat")):
+            data = loadmat(mat_file_path)
+            method = os.path.split(os.path.dirname(mat_file_path))[-1]
+            X_red = data['X_red'] if method != "dgufs" else data['X_red'].T
+            nan_cols = np.isnan(X_red).any(axis=0)
+            X_red = X_red[:, ~nan_cols]
+
+            scores = evaluate_clf(X_red, y, seed=seed, num_reps=num_reps)
+            red_dims = X_red.shape[1]
+            scores = enrich_scores(
+                scores,
+                kwargs={
+                    "dataset": dataset,
+                    "method": data.get("method", os.path.split(os.path.dirname(mat_file_path))[-1]),
+                    "duration": data["duration"].item(),
+                    "dim_ratio": float(red_dims) / float(full_dims),
+                    "full_dim": full_dims,
+                    "red_dim": red_dims
+                }
+            )
+
+            all_scores += scores
+
+    return pd.DataFrame(all_scores)
