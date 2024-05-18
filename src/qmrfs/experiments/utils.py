@@ -1,6 +1,7 @@
 import os
 import dataclasses as dc
 from typing import Optional
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -93,6 +94,20 @@ CLUSTERING_RESULTS = {
     "zoo": [0.882, 0.881, 0.667, 0.645, 0.748, 0.425, 0.901, 0.738, 0.803, 0.759, 0.817, 0.703, 0.658, 0.773, 0.752],
 }
 
+DATASET2THETA = {
+    "automobile": 0.2,
+    "breast_cancer": 0.80,
+    "heart-c": 0.425,
+    "heart-statlog": 0.74,
+    "hepatitis": 0.7,
+    "ionosphere": 0.7,
+    "lymphography": 0.265,
+    "sonar": 0.30,
+    "wdbc": 0.125,
+    "wine": 0.20,
+    "zoo": 0.635
+}
+
 
 def load_classification_results(use_ratio: bool):
     df = pd.DataFrame(data=CLASSIFICATION_RESULTS, index=BASELINE_METHODS)
@@ -114,34 +129,64 @@ def load_clustering_results(use_ratio: bool):
     return df
 
 
-def get_features_and_targets(dataset) -> (np.ndarray, pd.DataFrame, np.ndarray):
+def fix_data_dtypes(dataset):
     cat_cols = {col: "category" for col in dataset.variables.loc[
         (dataset.variables["type"].isin({"Binary", "Categorical"})) & (dataset.variables["role"] == "Feature")][
         "name"].tolist()}
     X_orig = dataset.data.features.astype(cat_cols)
-    if dataset.data.targets is not None:
-        y, _ = pd.factorize(dataset.data.targets.squeeze())
+    return X_orig
+
+
+def get_features(X_orig, use_factorize_categorical: bool) -> np.ndarray:
+    X_orig = X_orig.loc[:, ~X_orig.columns.duplicated()].copy()
+    X_orig = X_orig.loc[:, ~X_orig.isna().all(axis=0)].copy()
+    if use_factorize_categorical:
+        X_data = X_orig.copy()
+        for col in X_data.columns:
+            if X_data[col].dtype == 'category':
+                factorized, _ = pd.factorize(X_data[col])
+                X_data[col] = factorized.astype(float)
     else:
-        y = np.asarray([])
-    X_data = pd.get_dummies(X_orig).astype(float)
-    X_data = SimpleImputer().fit_transform(X_data)
-    return X_data, X_orig, y
+        X_data = pd.get_dummies(X_orig).astype(float)
+    X_data = SimpleImputer().fit_transform(X_data.astype(float))
+    return X_data
 
 
-def load_dataset(dataset_id: int, use_cache: bool = True):
+def load_dataset(dataset_id: int, use_cache: bool = True, use_factorize_categorical: bool = False):
     cache_folder = os.path.join(DATA_CACHE_LOCATION, str(dataset_id))
-    if use_cache and os.path.exists(cache_folder) and len(os.listdir(cache_folder)) > 0:
-        X_data = np.load(os.path.join(cache_folder, "preprocessed_data.npy"))
-        X_orig = pd.read_json(os.path.join(cache_folder, "original_data.json"), orient='split')
+    os.makedirs(cache_folder, exist_ok=True)
+    path_to_data_with_dtypes = os.path.join(cache_folder, "original_data.pkl")
+    path_factorize_cat = os.path.join(cache_folder, "preprocessed_data_factorized.npy")
+    path_dummy_cat = os.path.join(cache_folder, "preprocessed_data.npy")
+    if use_cache and os.path.exists(path_to_data_with_dtypes):
+        X_orig = pd.read_pickle(path_to_data_with_dtypes)
         y = np.load(os.path.join(cache_folder, "targets.npy"))
     else:
         dataset = fetch_ucirepo(id=dataset_id)
-        X_data, X_orig, y = get_features_and_targets(dataset)
+        X_orig = fix_data_dtypes(dataset)
+        targets = dataset.data.targets
+        if targets is not None:
+            y, _ = pd.factorize(targets.squeeze())
+        else:
+            y = np.asarray([])
+        if use_cache:
+            X_orig.to_pickle(path_to_data_with_dtypes)
+            np.save(os.path.join(cache_folder, "targets.npy"), y)
+
+    if use_cache and use_factorize_categorical and os.path.exists(path_factorize_cat):
+        X_data = np.load(path_factorize_cat)
+    elif use_cache and not use_factorize_categorical and os.path.exists(path_dummy_cat):
+        X_data = np.load(path_dummy_cat)
+    else:
+        X_data = get_features(X_orig, use_factorize_categorical=use_factorize_categorical)
+
         if use_cache:
             os.makedirs(cache_folder, exist_ok=True)
-            np.save(os.path.join(cache_folder, "preprocessed_data.npy"), X_data)
-            X_orig.to_json(os.path.join(cache_folder, "original_data.json"), orient='split')
-            np.save(os.path.join(cache_folder, "targets.npy"), y)
+            if use_factorize_categorical:
+                np.save(path_factorize_cat, X_data)
+            else:
+                np.save(path_dummy_cat, X_data)
+
     return X_data, X_orig, y
 
 #

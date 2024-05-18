@@ -65,7 +65,7 @@ def lineplot(pltdata, *, x: str, y: str,
         y_label = y
 
     fig, ax = plt.subplots()
-    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar)
+    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar, markers=True)
     ax.set_xlabel(x_label, fontdict={'fontsize': int(1.1 * fontsize)})
     ax.set_ylabel(y_label, fontdict={'fontsize': int(1.1 * fontsize)})
     if x_scale is not None:
@@ -158,7 +158,60 @@ def tbl_elm_without_std(value, num_decimal=3, is_best=False):
     return element
 
 
-def make_nc_multicol_table(table_data):
+def percentage_formatting(value: float, num_digits: int):
+    rounded = np.round(100 * value, decimals=num_digits)
+    if rounded < 10 ** (-num_digits):
+        out = "0.0"
+    elif rounded >= 10 ** (num_digits - 1):
+        out = f"{int(rounded)}"
+    else:
+        out = f"{rounded:.1f}"
+    return out
+
+
+def crate_full_res_tbl_elm(mean_value, std_value, num_digits: int):
+    out = r"$"
+    out += percentage_formatting(mean_value, num_digits=num_digits)
+    out += r" \pm "
+    out += percentage_formatting(std_value, num_digits=num_digits)
+    out += r"$"
+    return out
+
+
+def create_full_res_tex_code(cls_results: pd.DataFrame, clstr_results: pd.DataFrame):
+    out = r"""\begin{tabular}{@{}l|c|p{0.80cm}p{0.80cm}p{0.80cm}|p{0.80cm}p{0.80cm}p{0.80cm}@{}}
+        \toprule
+        \multicolumn{1}{c}{}  & \multicolumn{1}{c}{}  & \multicolumn{3}{c}{Classification Acc.} & \multicolumn{3}{c}{Clustering NMI}\\
+        \midrule
+        Dataset & \% F.S. & QMR-FS & Base-line & Base-line\cite{solorio2020review} & QMR-FS & Base-line & Base-line\cite{solorio2020review} \\
+        \midrule
+    """
+    datasets = cls_results.index
+
+    for dataset in datasets:
+        cls_df_row = cls_results.loc[dataset]
+        clstr_df_row = clstr_results.loc[dataset]
+        the_row = [f"{DATASET_INFO[dataset].pretty_name}"]
+
+        percentage_kept_dims = percentage_formatting(cls_df_row['dim_ratio'], num_digits=2)
+        the_row.append(f"{percentage_kept_dims}")
+
+        the_row.append(crate_full_res_tbl_elm(cls_df_row['red_mean'], cls_df_row['red_std'], num_digits=2))
+        the_row.append(crate_full_res_tbl_elm(cls_df_row['full_mean'], cls_df_row['full_std'], num_digits=2))
+        the_row.append(percentage_formatting(DATASET_INFO[dataset].acc_ref, num_digits=3))
+
+        the_row.append(crate_full_res_tbl_elm(clstr_df_row['red_mean'], clstr_df_row['red_std'], num_digits=2))
+        the_row.append(crate_full_res_tbl_elm(clstr_df_row['full_mean'], clstr_df_row['full_std'], num_digits=2))
+        the_row.append(percentage_formatting(DATASET_INFO[dataset].nmi_ref, num_digits=3))
+
+        the_row = " & ".join(the_row)
+        the_row += r"\\" + "\n"
+        out += the_row
+    out += "\\bottomrule\n\\end{tabular}"
+    return out
+
+
+def create_comparison_table_tex_code(table_data):
     out = create_multicol_table_start_nc(table_data)
     # out += create_supervised_row(table_data, pretty_names_obj)
     # out += r"\midrule"
@@ -186,6 +239,23 @@ def make_nc_multicol_table(table_data):
     return out
 
 
+def make_full_res_table(results_folder: str = "entropy_high2low_1-00e-01"):
+    main_save_dir = "results/tables/full_res"
+
+    cls_results = pd.read_json(f"results/data/main_experiment/classification/{results_folder}/full_data.json",
+                               orient='records').set_index("dataset")
+    clstr_results = pd.read_json(f"results/data/main_experiment/clustering/{results_folder}/full_data.json",
+                                 orient='records').set_index("dataset")
+
+    tex_code = create_full_res_tex_code(cls_results=cls_results, clstr_results=clstr_results)
+
+    os.makedirs(main_save_dir, exist_ok=True)
+    save_filename = os.path.join(main_save_dir, f"full_res.tex")
+    print(f"Saving to {save_filename}")
+    with open(save_filename, "w") as fp:
+        fp.write(tex_code)
+
+
 def make_comparison_table(mode):
     main_save_dir = "results/tables/rel_and_rank"
     qmr_res = pd.read_json(f"results/data/main_experiment/{mode}/rel_and_rank.json")
@@ -206,14 +276,10 @@ def make_comparison_table(mode):
             "rank_std": "Avg. rank std."
         })
 
-    tex_code = make_nc_multicol_table(qmr_res.T)
+    tex_code = create_comparison_table_tex_code(qmr_res.T)
 
     os.makedirs(main_save_dir, exist_ok=True)
     save_filename = os.path.join(main_save_dir, f"{mode}.tex")
     print(f"Saving to {save_filename}")
     with open(save_filename, "w") as fp:
         fp.write(tex_code)
-
-
-def make_qmr_results_table(df: pd.DataFrame):
-    pass

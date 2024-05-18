@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Literal, Callable
 import time
 
 import numpy as np
@@ -9,7 +9,7 @@ from sklearn.svm import LinearSVC
 import tqdm
 
 from qmrfs import qmr_feature_selection as qmrfs
-from qmrfs.experiments.utils import DATASET_INFO, load_dataset
+from qmrfs.experiments.utils import DATASET_INFO, load_dataset, DATASET2THETA
 
 
 def evaluate_clf(features, y, seed: int):
@@ -33,22 +33,26 @@ def evaluate_clf(features, y, seed: int):
     return np.mean(scores), np.std(scores)
 
 
-def run_classification_experiment(tolerance: float, sorting_strategy: qmrfs.SortingStrategy, seed: int,
-                                  feature_order_seed: Optional[int] = None, verbose: bool = False):
+def run_classification_experiment(tolerance: Union[float, Literal['auto']], sorting_strategy: qmrfs.SortingStrategy,
+                                  feature_translation: qmrfs.TranslationMode, seed: int,
+                                  use_factorize_categorical: bool, feature_order_seed: Optional[int] = None,
+                                  verbose: bool = False):
     if verbose:
         print("Classification evaluation")
     rel_scores = dict()
     abs_scores = []
 
     for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
+        tol = DATASET2THETA[dataset] if tolerance == 'auto' else tolerance
         if verbose:
             print(f"Running classification for dataset {dataset}")
-        X_data, X_orig, y = load_dataset(info.uci_id)
+        X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         start = time.perf_counter()
         pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
             X_data,
-            tolerance=tolerance,
+            tolerance=tol,
             sorting_strategy=sorting_strategy,
+            feature_translation=feature_translation,
             seed=feature_order_seed
         )
         duration = time.perf_counter() - start

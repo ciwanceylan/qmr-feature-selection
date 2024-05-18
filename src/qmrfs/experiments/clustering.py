@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Literal
 import time
 
 import numpy as np
@@ -8,7 +8,7 @@ from sklearn.metrics import normalized_mutual_info_score
 import tqdm
 
 from qmrfs import qmr_feature_selection as qmrfs
-from qmrfs.experiments.utils import DATASET_INFO, load_dataset
+from qmrfs.experiments.utils import DATASET_INFO, load_dataset, DATASET2THETA
 
 
 def evaluate_clustering(features, y, seed: int, num_reps: int = 20):
@@ -31,7 +31,8 @@ def evaluate_clustering(features, y, seed: int, num_reps: int = 20):
     return np.mean(scores), np.std(scores)
 
 
-def run_clustering_experiment(tolerance: float, sorting_strategy: qmrfs.SortingStrategy, seed: int,
+def run_clustering_experiment(tolerance: Union[float, Literal['auto']], sorting_strategy: qmrfs.SortingStrategy,
+                              feature_translation: qmrfs.TranslationMode, seed: int, use_factorize_categorical: bool,
                               feature_order_seed: Optional[int] = None, verbose: bool = False):
     if verbose:
         print("Clustering evaluation")
@@ -39,14 +40,16 @@ def run_clustering_experiment(tolerance: float, sorting_strategy: qmrfs.SortingS
     abs_scores = []
 
     for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
+        tol = DATASET2THETA[dataset] if tolerance == 'auto' else tolerance
         if verbose:
             print(f"Running clustering for dataset {dataset}")
-        X_data, X_orig, y = load_dataset(info.uci_id)
+        X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         start = time.perf_counter()
         pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
             X_data,
-            tolerance=tolerance,
+            tolerance=tol,
             sorting_strategy=sorting_strategy,
+            feature_translation=feature_translation,
             seed=feature_order_seed
         )
         duration = time.perf_counter() - start
@@ -60,7 +63,7 @@ def run_clustering_experiment(tolerance: float, sorting_strategy: qmrfs.SortingS
         red_score, red_score_std = evaluate_clustering(pruned_x, y, seed=seed)
 
         abs_scores.append({
-            "ref_val": DATASET_INFO[dataset].acc_ref,
+            "ref_val": DATASET_INFO[dataset].nmi_ref,
             "full_mean": full_score,
             "full_std": full_score_std,
             "red_mean": red_score,
