@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from ucimlrepo import fetch_ucirepo
+from scipy.io import loadmat
 
 DATA_CACHE_LOCATION = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'datasets'))
@@ -188,6 +189,13 @@ def load_dataset(dataset_id: int, use_cache: bool = True, use_factorize_categori
                 np.save(path_dummy_cat, X_data)
 
     return X_data, X_orig, y
+
+
+def load_isolet():
+    data = loadmat("datasets/isolet/Isolet1.mat")
+    X_data = data['X']
+    y = data['Y'].squeeze()
+    return X_data, y
 
 #
 # if __name__ == "__main__":

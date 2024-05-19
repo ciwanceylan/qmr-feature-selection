@@ -65,7 +65,7 @@ from qmrfs.qmr_feature_selection import TranslationMode
 #     full_rel_df.to_json(os.path.join(folder, "rel_and_rank.json"), indent=2)
 #     abs_results.to_json(os.path.join(folder, "full_data.json"), orient='records', indent=2)
 
-def main_classification(use_factorize_categorical: bool):
+def main_classification(use_factorize_categorical: bool, seed: int):
     if use_factorize_categorical:
         folder = f"results/data/main_experiment/factorize/"
     else:
@@ -74,12 +74,13 @@ def main_classification(use_factorize_categorical: bool):
     df = classification.run_classification_evaluation_on_precomputed_features(
         num_reps=25,
         seed=seed,
-        use_factorize_categorical=use_factorize_categorical
+        use_factorize_categorical=use_factorize_categorical,
+        verbose=True
     )
     df.to_json(os.path.join(folder, "classification.json"), orient='records', indent=2)
 
 
-def main_clustering(use_factorize_categorical: bool):
+def main_clustering(use_factorize_categorical: bool, seed: int):
     if use_factorize_categorical:
         folder = f"results/data/main_experiment/factorize/"
     else:
@@ -88,7 +89,8 @@ def main_clustering(use_factorize_categorical: bool):
     df = clustering.run_clustering_evaluation_on_precomputed_features(
         num_reps=25,
         seed=seed,
-        use_factorize_categorical=use_factorize_categorical
+        use_factorize_categorical=use_factorize_categorical,
+        verbose=True
     )
     df.to_json(os.path.join(folder, "clustering.json"), orient='records', indent=2)
 
@@ -97,10 +99,10 @@ if __name__ == "__main__":
     # tolerance = 'auto'
     seed = 6342312
 
-    main_classification(use_factorize_categorical=True)
-    main_clustering(use_factorize_categorical=True)
-    main_classification(use_factorize_categorical=False)
-    main_clustering(use_factorize_categorical=False)
+    main_classification(use_factorize_categorical=True, seed=seed)
+    main_clustering(use_factorize_categorical=True, seed=seed)
+    # main_classification(use_factorize_categorical=False)
+    # main_clustering(use_factorize_categorical=False)
 
     # main_classification(tolerance=tolerance, sorting_strategy='entropy_high2low',
     #                     seed=seed, feature_order_seed=None, use_factorize_categorical=True)

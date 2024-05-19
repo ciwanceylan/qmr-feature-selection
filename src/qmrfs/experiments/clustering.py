@@ -1,3 +1,4 @@
+import copy
 from typing import Optional, Union, Literal, List, Dict
 import time
 import os
@@ -12,7 +13,7 @@ import tqdm
 import glob
 
 from qmrfs import qmr_feature_selection as qmrfs
-from qmrfs.experiments.utils import DATASET_INFO, load_dataset, DATASET2THETA
+import qmrfs.experiments.utils as utils
 
 
 def evaluate_clustering(features, y, seed: int, num_reps: int = 25):
@@ -45,11 +46,11 @@ def run_clustering_experiment(tolerance: Union[float, Literal['auto']], sorting_
     rel_scores = dict()
     abs_scores = []
 
-    for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
-        tol = DATASET2THETA[dataset] if tolerance == 'auto' else tolerance
+    for dataset, info in tqdm.tqdm(utils.DATASET_INFO.items(), total=len(utils.DATASET_INFO)):
+        tol = utils.DATASET2THETA[dataset] if tolerance == 'auto' else tolerance
         if verbose:
             print(f"Running clustering for dataset {dataset}")
-        X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
+        X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         start = time.perf_counter()
         pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
             X_data,
@@ -69,7 +70,7 @@ def run_clustering_experiment(tolerance: Union[float, Literal['auto']], sorting_
         red_score, red_score_std = evaluate_clustering(pruned_x, y, seed=seed)
 
         abs_scores.append({
-            "ref_val": DATASET_INFO[dataset].nmi_ref,
+            "ref_val": utils.DATASET_INFO[dataset].nmi_ref,
             "full_mean": full_score,
             "full_std": full_score_std,
             "red_mean": red_score,
@@ -110,11 +111,22 @@ def run_clustering_evaluation_on_precomputed_features(
         print("Clustering evaluation")
     all_scores = []
     mode = "factorize" if use_factorize_categorical else "dummy"
+    dataset_info = copy.deepcopy(utils.DATASET_INFO)
 
-    for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
+    class PlaceholderObject(object):
+        pass
+
+    fake_info = PlaceholderObject()
+    fake_info.uci_id = 'isolet'
+    dataset_info['isolet'] = fake_info
+
+    for dataset, info in tqdm.tqdm(dataset_info.items(), total=len(dataset_info)):
         if verbose:
             print(f"Running clustering for dataset {dataset}")
-        X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
+        if dataset == 'isolet':
+            X_data, y = utils.load_isolet()
+        else:
+            X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         full_dims = X_data.shape[1]
 
         scores = evaluate_clustering(X_data, y, seed=seed, num_reps=num_reps)
@@ -130,10 +142,14 @@ def run_clustering_evaluation_on_precomputed_features(
             }
         )
         all_scores += scores
-        for mat_file_path in tqdm.tqdm(glob.glob(f"baseline_features/{info.uci_id}/{mode}/*/*.mat")):
+        if dataset == 'isolet':
+            glob_paths = glob.glob(f"baseline_features/{info.uci_id}/*/*.mat")
+        else:
+            glob_paths = glob.glob(f"baseline_features/{info.uci_id}/{mode}/*/*.mat")
+        for mat_file_path in tqdm.tqdm(glob_paths):
             data = loadmat(mat_file_path)
             method = os.path.split(os.path.dirname(mat_file_path))[-1]
-            X_red = data['X_red'] if method != "dgufs" else data['X_red'].T
+            X_red = data['X_red']
             nan_cols = np.isnan(X_red).any(axis=0)
             X_red = X_red[:, ~nan_cols]
 
@@ -143,7 +159,7 @@ def run_clustering_evaluation_on_precomputed_features(
                 scores,
                 kwargs={
                     "dataset": dataset,
-                    "method": data.get("method", os.path.split(os.path.dirname(mat_file_path))[-1]),
+                    "method": method,
                     "duration": data["duration"].item(),
                     "dim_ratio": float(red_dims) / float(full_dims),
                     "full_dim": full_dims,

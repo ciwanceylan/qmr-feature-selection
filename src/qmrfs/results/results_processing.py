@@ -1,15 +1,29 @@
+from typing import Dict, List, Collection
 import os
 import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pylab
 from cycler import cycler
 
 colors_cb_github = {'qual': ['#377eb8', '#ff7f00', '#4daf4a', '#f781bf', '#a65628', '#984ea3', '#999999', '#e41a1c',
                              '#dede00']}
 
 from qmrfs.experiments.utils import DATASET_INFO
+
+PRETTY_METHOD_NAMES = {
+    "qmrfs": "QMR-FS",
+    "svd_entropy": "SVD Ent.",
+    "ls": "LS",
+    "spec": "SPEC",
+    "usfsm": "USFSM",
+    "udfs": "UDFS",
+    "ndfs": "NDFS",
+    "cnafs": "CNAFS",
+    "fmiufs": "FMIUFS",
+}
 
 
 def setup_matplotlib(fontsize=32, fontsize_legend=26):
@@ -53,11 +67,38 @@ def save_all_formats(figure: plt.Figure, save_path: str):
     figure.savefig(os.path.join(save_dir_pdf, f"{name}.pdf"))
 
 
+def make_legend_pretty(legend_obj, pretty_names: Dict[str, str]):
+    legend_obj.set_title(None)
+    for legend_text in legend_obj.texts:
+        legend_text.set_text(pretty_names[legend_text.get_text()])
+
+
+def handle_legend(ax: plt.Axes, seperate_legend: bool, legend_order: List[str], figsize=(22, 2), ncols=5):
+    pretty_names = PRETTY_METHOD_NAMES
+
+    legend_order = {label: i for i, label in enumerate(legend_order)}
+    if not seperate_legend:
+        make_legend_pretty(ax.legend(ncol=1), pretty_names=pretty_names)
+        figlegend = None
+    else:
+        ax.legend().set_visible(False)
+        figlegend = pylab.figure(figsize=figsize)
+        handles, labels = ax.get_legend_handles_labels()
+        handles_and_labels = [(handle, label) for handle, label in zip(handles, labels)]
+        handles_and_labels = sorted(handles_and_labels, key=lambda x: legend_order[x[1]])
+        sorted_handles, sorted_labels = zip(*handles_and_labels)
+        # ncol = len(lgd_handles[1]) // 2
+        labels = [pretty_names[name] for name in sorted_labels]
+        figlegend.legend(sorted_handles, labels, loc='center', ncol=ncols)
+    return figlegend
+
+
 def lineplot(pltdata, *, x: str, y: str,
              x_label: str = None, y_label: str = None,
              x_lim: tuple[float, float] = None, y_lim: tuple[float, float] = None,
              x_scale: str = None, y_scale: str = None, hue=None, errorbar,
-             save_path: str = None, fontsize: int = 32, fontsize_legend: int = 26):
+             save_path: str = None, fontsize: int = 32, fontsize_legend: int = 26,
+             seperate_legend: bool = False, legend_order: List[str] = None):
     setup_matplotlib(fontsize=fontsize, fontsize_legend=fontsize_legend)
     if x_label is None:
         x_label = x
@@ -65,7 +106,8 @@ def lineplot(pltdata, *, x: str, y: str,
         y_label = y
 
     fig, ax = plt.subplots()
-    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar, markers=True)
+    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar, markers=True,
+                 hue_order=legend_order, style_order=legend_order, palette='colorblind', markersize=22)
     ax.set_xlabel(x_label, fontdict={'fontsize': int(1.1 * fontsize)})
     ax.set_ylabel(y_label, fontdict={'fontsize': int(1.1 * fontsize)})
     if x_scale is not None:
@@ -82,6 +124,11 @@ def lineplot(pltdata, *, x: str, y: str,
 
     if save_path is not None:
         save_all_formats(fig, save_path)
+    figlegend = handle_legend(ax, seperate_legend=seperate_legend, legend_order=legend_order)
+    if save_path is not None:
+        save_all_formats(fig, save_path)
+        if figlegend is not None:
+            save_all_formats(figlegend, save_path + "_legend")
 
     return fig, ax
 
@@ -129,6 +176,13 @@ def create_multicol_table_start_nc(table_data):
 
     out += "& " + titles + r"\\" + "\n" + r"\midrule" + "\n"
     return out
+
+
+def method_complexities():
+    # QMR-FS   & SVD-entropy     & LS             & SPEC           & USFSM                     & UDFS                    & NDFS                           & CNAFS & FMIUFS
+    out = r"""QMR-FS & SVD-entropy & LS & SPEC & USFSM & UDFS & NDFS & CNAFS & FMIUFS \\
+    Time complexity & $\bigO(n d^2)$ & $\bigO(n d^3)$  & $\bigO(n^2 d)$ & $\bigO(n^2 d)$ & $\bigO(n^3 d  + n^2 d^2)$  &  $\bigO(n^2 d + d^3)^*$ &  $\bigO(n^2 d  + n d^2 + d^3 + )^*$ & $\bigO(n^2 d  + n d^2 + d^3 + )^*$ & $\bigO(n^2 d   + n d^2)$ \\
+    """
 
 
 def get_thresholds_top_k(df, k_val: int):
@@ -237,6 +291,47 @@ def create_comparison_table_tex_code(table_data):
     # if c < len(algs_dict) - 1:
     out += "\\bottomrule\n\\end{tabular}"
     return out
+
+def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
+    methods = set(methods)
+    tol = 0.01
+    p_min = (1. - tol) * p
+    p_max = (1. + tol) * p
+    filtered_data = data.loc[(data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max)]
+
+    count = 0
+    while set(filtered_data["method"].unique()) != methods:
+        tol += 0.01
+        p_min = (1. - tol) * p
+        p_max = (1. + tol) * p
+        filtered_data = data.loc[(data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max)]
+        count += 1
+        if count > 9:
+            raise RuntimeError(f"Could not find dim ratio with in tolerance of {p}")
+    return filtered_data
+
+def create_comparison_table_data(datasets: Collection[str], methods: List[str]):
+    dim_ratios = [0.4, 0.6, 0.8]
+    cls_data = pd.read_json("results/data/factorize/classification.json", orient='records')
+    cls_data = cls_data.loc[(cls_data['dataset'] in datasets) & (cls_data['method'] in methods)].copy()
+    clstr_data = pd.read_json("results/data/factorize/clustering.json", orient='records')
+    clstr_data = clstr_data.loc[(clstr_data['dataset'] in datasets) & (clstr_data['method'] in methods)].copy()
+
+    isolet_durations = clstr_data.loc[
+        clstr_data["dataset"] == "isolet"
+    ].group_by(["method"], as_index=True)["duration"].agg("mean")
+
+    cls_tbl_data = {}
+    clstr_tbl_data = {}
+    for p in dim_ratios:
+        cls_fitered_data = filter_data_by_dim_ratio(cls_data, p=p, methods=methods)
+        avg_data = cls_fitered_data.group_by(["dataset", "method"], as_index=False).agg("mean")
+        avg_data['rank'] = avg_data.group_by("dataset")['accuracy'].rank(method='dense', ascending=False)
+        # TODO
+
+        #
+        # cls_fitered_data[int(100 * p)] = filter_data_by_dim_ratio(cls_data, p=p, methods=methods)
+        # clstr_fitered_data[int(100 * p)] = filter_data_by_dim_ratio(clstr_data, p=p, methods=methods)
 
 
 def make_full_res_table(results_folder: str = "entropy_high2low_1-00e-01"):
