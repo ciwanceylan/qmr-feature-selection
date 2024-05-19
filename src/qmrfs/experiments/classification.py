@@ -143,7 +143,6 @@ def run_classification_evaluation_on_precomputed_features(
         if dataset == 'isolet':
             X_data, y = utils.load_isolet()
         else:
-            continue
             X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         full_dims = X_data.shape[1]
 
