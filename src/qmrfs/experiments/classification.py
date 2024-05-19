@@ -46,7 +46,7 @@ def evaluate_clf(features, y, num_reps: int, seed: int):
 
     # all_scores = []
     # for i, seed_ in enumerate(seeds):
-    #     all_scores += train(seed_)
+    #     all_scores += train(features_std, y, seed_)
 
     all_scores = Parallel(n_jobs=num_reps)(delayed(train)(features_std, y, seed_) for seed_ in seeds)
     all_scores = sum(all_scores, [])
@@ -146,7 +146,7 @@ def run_classification_evaluation_on_precomputed_features(
             X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         full_dims = X_data.shape[1]
 
-        scores = evaluate_clf(X_data, y, seed=seed, num_reps=num_reps)
+        scores = evaluate_clf(X_data, y, seed=seed, num_reps=num_reps if dataset != 'isolet' else 2)
         scores = enrich_scores(
             scores,
             kwargs={

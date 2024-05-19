@@ -72,7 +72,7 @@ def main_classification(use_factorize_categorical: bool, seed: int):
         folder = f"results/data/main_experiment/dummy/"
     os.makedirs(folder, exist_ok=True)
     df = classification.run_classification_evaluation_on_precomputed_features(
-        num_reps=25,
+        num_reps=5,
         seed=seed,
         use_factorize_categorical=use_factorize_categorical,
         verbose=True
