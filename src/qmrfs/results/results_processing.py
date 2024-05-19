@@ -292,46 +292,67 @@ def create_comparison_table_tex_code(table_data):
     out += "\\bottomrule\n\\end{tabular}"
     return out
 
+
 def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
     methods = set(methods)
     tol = 0.01
+    dim = int(100 * p)
+    dim_tol = 1
     p_min = (1. - tol) * p
     p_max = (1. + tol) * p
-    filtered_data = data.loc[(data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max)]
+    dim_min = dim - dim_tol
+    dim_max = dim + dim_tol
+
+    mask = (
+            ((data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max) & data["dataset"] != 'isolet') |
+            ((data["red_dim"] > dim_min) & (data["red_dim"] < dim_max) & data["dataset"] == 'isolet')
+    )
+    filtered_data = data.loc[mask]
 
     count = 0
     while set(filtered_data["method"].unique()) != methods:
         tol += 0.01
         p_min = (1. - tol) * p
         p_max = (1. + tol) * p
-        filtered_data = data.loc[(data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max)]
+        dim_min -= 1
+        dim_max += 1
+        mask = (
+                ((data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max) & data["dataset"] != 'isolet') |
+                ((data["red_dim"] > dim_min) & (data["red_dim"] < dim_max) & data["dataset"] == 'isolet')
+        )
+        filtered_data = data.loc[mask]
         count += 1
         if count > 9:
             raise RuntimeError(f"Could not find dim ratio with in tolerance of {p}")
     return filtered_data
 
+
+def _get_avg_rank(data: pd.DataFrame, p: float, methods: List[str], score_name: str):
+    filtered_data = filter_data_by_dim_ratio(data, p=p, methods=methods)
+    avg_data = filtered_data.group_by(["dataset", "method"], as_index=False).agg("mean")
+    avg_data['rank'] = avg_data.group_by("dataset")[score_name].rank(method='dense', ascending=False)
+    avg_rank = avg_data.group_by("method", as_index=True)['rank'].agg(['mean', 'std'])
+    return avg_rank
+
+
 def create_comparison_table_data(datasets: Collection[str], methods: List[str]):
     dim_ratios = [0.4, 0.6, 0.8]
     cls_data = pd.read_json("results/data/factorize/classification.json", orient='records')
     cls_data = cls_data.loc[(cls_data['dataset'] in datasets) & (cls_data['method'] in methods)].copy()
-    clstr_data = pd.read_json("results/data/factorize/clustering.json", orient='records')
-    clstr_data = clstr_data.loc[(clstr_data['dataset'] in datasets) & (clstr_data['method'] in methods)].copy()
 
+    clstr_data = pd.read_json("results/data/factorize/clustering.json", orient='records')
     isolet_durations = clstr_data.loc[
         clstr_data["dataset"] == "isolet"
-    ].group_by(["method"], as_index=True)["duration"].agg("mean")
+        ].group_by(["method"], as_index=True)["duration"].agg("mean")
+    clstr_data = clstr_data.loc[(clstr_data['dataset'] in datasets) & (clstr_data['method'] in methods)].copy()
 
-    cls_tbl_data = {}
-    clstr_tbl_data = {}
+    cls_avg_rank_data = {}
+    clstr_avg_rank_data = {}
     for p in dim_ratios:
-        cls_fitered_data = filter_data_by_dim_ratio(cls_data, p=p, methods=methods)
-        avg_data = cls_fitered_data.group_by(["dataset", "method"], as_index=False).agg("mean")
-        avg_data['rank'] = avg_data.group_by("dataset")['accuracy'].rank(method='dense', ascending=False)
-        # TODO
+        cls_avg_rank_data[int(100 * p)] = _get_avg_rank(cls_data, p=p, methods=methods, score_name='accuracy')
+        clstr_avg_rank_data[int(100 * p)] = _get_avg_rank(clstr_data, p=p, methods=methods, score_name='nmi')
 
-        #
-        # cls_fitered_data[int(100 * p)] = filter_data_by_dim_ratio(cls_data, p=p, methods=methods)
-        # clstr_fitered_data[int(100 * p)] = filter_data_by_dim_ratio(clstr_data, p=p, methods=methods)
+    return isolet_durations, cls_avg_rank_data, clstr_avg_rank_data
 
 
 def make_full_res_table(results_folder: str = "entropy_high2low_1-00e-01"):
