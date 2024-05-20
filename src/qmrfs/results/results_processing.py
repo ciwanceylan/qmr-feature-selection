@@ -2,6 +2,7 @@ from typing import Dict, List, Collection
 import os
 import pandas as pd
 import numpy as np
+import warnings
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -14,6 +15,7 @@ colors_cb_github = {'qual': ['#377eb8', '#ff7f00', '#4daf4a', '#f781bf', '#a6562
 from qmrfs.experiments.utils import DATASET_INFO
 
 PRETTY_METHOD_NAMES = {
+    'baseline_full': "Baseline",
     "qmrfs": "QMR-FS",
     "svd_entropy": "SVD Ent.",
     "ls": "LS",
@@ -98,15 +100,18 @@ def lineplot(pltdata, *, x: str, y: str,
              x_lim: tuple[float, float] = None, y_lim: tuple[float, float] = None,
              x_scale: str = None, y_scale: str = None, hue=None, errorbar,
              save_path: str = None, fontsize: int = 32, fontsize_legend: int = 26,
-             seperate_legend: bool = False, legend_order: List[str] = None):
+             seperate_legend: bool = False, legend_order: List[str], ax=None):
     setup_matplotlib(fontsize=fontsize, fontsize_legend=fontsize_legend)
     if x_label is None:
         x_label = x
     if y_label is None:
         y_label = y
 
-    fig, ax = plt.subplots()
-    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar, markers=True,
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+    sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar, markers=True, ax=ax,
                  hue_order=legend_order, style_order=legend_order, palette='colorblind', markersize=22)
     ax.set_xlabel(x_label, fontdict={'fontsize': int(1.1 * fontsize)})
     ax.set_ylabel(y_label, fontdict={'fontsize': int(1.1 * fontsize)})
@@ -293,58 +298,70 @@ def create_comparison_table_tex_code(table_data):
     return out
 
 
-def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
-    methods = set(methods)
-    tol = 0.01
-    dim = int(100 * p)
-    dim_tol = 1
+def create_filter_mask(data: pd.DataFrame, dataset: str, tol: float, p: float, dim_tol: int, dim: int):
     p_min = (1. - tol) * p
     p_max = (1. + tol) * p
     dim_min = dim - dim_tol
     dim_max = dim + dim_tol
+    if dataset == 'isolet':
+        mask = (data["red_dim"] > dim_min) & (data["red_dim"] < dim_max) & (data["dataset"] == 'isolet')
+    else:
+        mask = (data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max) & (data["dataset"] == dataset)
+    return mask
 
-    mask = (
-            ((data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max) & data["dataset"] != 'isolet') |
-            ((data["red_dim"] > dim_min) & (data["red_dim"] < dim_max) & data["dataset"] == 'isolet')
-    )
-    filtered_data = data.loc[mask]
 
-    count = 0
-    while set(filtered_data["method"].unique()) != methods:
-        tol += 0.01
-        p_min = (1. - tol) * p
-        p_max = (1. + tol) * p
-        dim_min -= 1
-        dim_max += 1
-        mask = (
-                ((data["dim_ratio"] > p_min) & (data["dim_ratio"] < p_max) & data["dataset"] != 'isolet') |
-                ((data["red_dim"] > dim_min) & (data["red_dim"] < dim_max) & data["dataset"] == 'isolet')
-        )
+def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
+    datasets = data['dataset'].unique()
+    methods = set(methods)
+    tol = {d: 0.01 for d in datasets}
+    dim = int(100 * p)
+    dim_tol = 1
+
+    finished_data = dict()
+
+    for dataset in datasets:
+
+        mask = create_filter_mask(data, dataset=dataset, tol=tol[dataset], p=p, dim_tol=dim_tol, dim=dim)
         filtered_data = data.loc[mask]
-        count += 1
-        if count > 9:
-            raise RuntimeError(f"Could not find dim ratio with in tolerance of {p}")
-    return filtered_data
+
+        count = 0
+        while set(filtered_data["method"].unique()) != methods:
+            if count >= 10:
+                warnings.warn(f"Method difference {methods - set(filtered_data['method'].unique())} for tolerance of {p} for dataset {dataset}")
+                # raise RuntimeError(f"Could not find dim ratio with in tolerance of {p} for dataset {dataset}")
+
+            if dataset == "isolet":
+                dim_tol += 1
+            else:
+                tol[dataset] += 0.02
+            mask = create_filter_mask(data, dataset=dataset, tol=tol[dataset], p=p, dim_tol=dim_tol, dim=dim)
+            filtered_data = data.loc[mask]
+            count += 1
+
+        finished_data[dataset] = filtered_data
+
+    finished_data = pd.concat(finished_data.values(), ignore_index=True)
+    return finished_data
 
 
 def _get_avg_rank(data: pd.DataFrame, p: float, methods: List[str], score_name: str):
     filtered_data = filter_data_by_dim_ratio(data, p=p, methods=methods)
-    avg_data = filtered_data.group_by(["dataset", "method"], as_index=False).agg("mean")
-    avg_data['rank'] = avg_data.group_by("dataset")[score_name].rank(method='dense', ascending=False)
-    avg_rank = avg_data.group_by("method", as_index=True)['rank'].agg(['mean', 'std'])
+    avg_data = filtered_data.groupby(["dataset", "method"], as_index=False).agg("mean")
+    avg_data['rank'] = avg_data.groupby("dataset")[score_name].rank(method='dense', ascending=False)
+    avg_rank = avg_data.groupby("method", as_index=True)['rank'].agg(['mean', 'std'])
     return avg_rank
 
 
 def create_comparison_table_data(datasets: Collection[str], methods: List[str]):
     dim_ratios = [0.4, 0.6, 0.8]
-    cls_data = pd.read_json("results/data/factorize/classification.json", orient='records')
-    cls_data = cls_data.loc[(cls_data['dataset'] in datasets) & (cls_data['method'] in methods)].copy()
+    cls_data = pd.read_json("results/data/main_experiment/factorize/classification.json", orient='records')
+    cls_data = cls_data.loc[(cls_data['dataset'].isin(set(datasets))) & (cls_data['method'].isin(set(methods)))].copy()
 
-    clstr_data = pd.read_json("results/data/factorize/clustering.json", orient='records')
+    clstr_data = pd.read_json("results/data/main_experiment/factorize/clustering.json", orient='records')
     isolet_durations = clstr_data.loc[
         clstr_data["dataset"] == "isolet"
-        ].group_by(["method"], as_index=True)["duration"].agg("mean")
-    clstr_data = clstr_data.loc[(clstr_data['dataset'] in datasets) & (clstr_data['method'] in methods)].copy()
+        ].groupby(["method"], as_index=True)["duration"].agg("mean")
+    clstr_data = clstr_data.loc[(clstr_data['dataset'].isin(set(datasets))) & (clstr_data['method'].isin(set(methods)))].copy()
 
     cls_avg_rank_data = {}
     clstr_avg_rank_data = {}

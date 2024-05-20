@@ -1,9 +1,11 @@
 import os
-from typing import Literal, Set, Collection
+from typing import Literal, Set, Collection, List
 import pandas as pd
 import qmrfs.results.results_processing as resproc
 from qmrfs.qmr_feature_selection import TranslationMode, SortingStrategy
 import glob
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def load_tol_sens_data(mode: Literal['classification', 'clustering'], cat_pp_mode: Literal['factorize', 'dummy'],
@@ -17,8 +19,16 @@ def load_tol_sens_data(mode: Literal['classification', 'clustering'], cat_pp_mod
 
 
 def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'],
-                                    cat_pp_mode: Literal['factorize', 'dummy']):
+                                    cat_pp_mode: Literal['factorize', 'dummy'],
+                                    methods: List[str]):
     data = pd.read_json(f"./results/data/main_experiment/{cat_pp_mode}/{mode}.json")
+    baseline_results = data.loc[data["method"] == 'baseline_full'].copy()
+    baseline_results_copy = baseline_results.copy()
+    baseline_results_copy['dim_ratio'] = 0.2
+    baseline_results['dim_ratio'] = 0.92
+    baseline_results = pd.concat((baseline_results_copy, baseline_results), axis=0, ignore_index=True)
+    data = data.loc[data["method"] != 'baseline_full'].copy()
+    data = data.loc[(data['dim_ratio'] < 0.99) & (data['dim_ratio'] > 0.18)].copy()
     data['method'] = data['method'].map(lambda x: x[0] if isinstance(x, list) else x)
 
     y = "accuracy" if mode == "classification" else "nmi"
@@ -28,12 +38,16 @@ def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'
     for dataset_name in datasets:
         save_folder = f"results/figures/comparison/{cat_pp_mode}/{dataset_name}/"
         plt_data = data.loc[data["dataset"] == dataset_name]
+        bl_plt_data = baseline_results.loc[baseline_results["dataset"] == dataset_name]
 
-        resproc.lineplot(
+        fig, ax = resproc.lineplot(
             plt_data, x="dim_ratio", x_label=r"Dim. ratio", y=y, y_label=y_label,
-            hue="method", errorbar="sd",
-            save_path=os.path.join(save_folder, mode)
+            hue="method", errorbar="sd", legend_order=methods,
+            save_path=os.path.join(save_folder, mode), seperate_legend=True
         )
+        sns.lineplot(data=bl_plt_data, x="dim_ratio", y=y, hue="method", errorbar='sd', markers=False, ax=ax,
+                     palette=['k'])
+        plt.close(fig)
 
 
 def plot_tol_sens_single_sorting_model(mode: Literal['classification', 'clustering'],
@@ -143,10 +157,19 @@ def plot_tol_sens_sorting(
 
 
 if __name__ == "__main__":
-    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize')
-    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize')
-    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='dummy')
-    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='dummy')
+    datasets = ["automobile", "breast_cancer", "heart-c", "heart-statlog",
+                # "hepatitis",
+                # "ionosphere",
+                "lymphography", "sonar", "wdbc", "wine", "zoo", "isolet"]
+
+    methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+
+    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
+    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
+    # make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='dummy')
+    # make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='dummy')
+
+    # out = resproc.create_comparison_table_data(datasets=datasets, methods=methods)
 
     # resproc.make_comparison_table("classification")
     # resproc.make_comparison_table("clustering")
