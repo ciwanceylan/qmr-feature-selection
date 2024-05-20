@@ -3,6 +3,8 @@ import os
 import pandas as pd
 import numpy as np
 import warnings
+import copy
+from datetime import timedelta
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -37,7 +39,7 @@ def setup_matplotlib(fontsize=32, fontsize_legend=26):
         'legend.edgecolor': '1',
         'legend.facecolor': 'inherit',
         'legend.framealpha': 0.6,
-        'legend.markerscale': 2.3,
+        'legend.markerscale': 1.5,
         # 'text.latex.preview': True,
         'text.usetex': True,
         'svg.fonttype': 'none',
@@ -75,7 +77,7 @@ def make_legend_pretty(legend_obj, pretty_names: Dict[str, str]):
         legend_text.set_text(pretty_names[legend_text.get_text()])
 
 
-def handle_legend(ax: plt.Axes, seperate_legend: bool, legend_order: List[str], figsize=(22, 2), ncols=5):
+def handle_legend(ax: plt.Axes, seperate_legend: bool, legend_order: List[str], figsize=(36, 2), ncols=10):
     pretty_names = PRETTY_METHOD_NAMES
 
     legend_order = {label: i for i, label in enumerate(legend_order)}
@@ -100,7 +102,7 @@ def lineplot(pltdata, *, x: str, y: str,
              x_lim: tuple[float, float] = None, y_lim: tuple[float, float] = None,
              x_scale: str = None, y_scale: str = None, hue=None, errorbar,
              save_path: str = None, fontsize: int = 32, fontsize_legend: int = 26,
-             seperate_legend: bool = False, legend_order: List[str], ax=None):
+             seperate_legend: bool = False, legend_order: List[str], ax=None, baseline_method: str = None):
     setup_matplotlib(fontsize=fontsize, fontsize_legend=fontsize_legend)
     if x_label is None:
         x_label = x
@@ -111,8 +113,23 @@ def lineplot(pltdata, *, x: str, y: str,
         fig, ax = plt.subplots()
     else:
         fig = ax.get_figure()
+    plt.tight_layout(pad=0.2)
+
+    if baseline_method is not None:
+        baseline_results = pltdata.loc[pltdata["method"] == baseline_method].copy()
+        pltdata = pltdata.loc[pltdata["method"] != baseline_method].copy()
+        baseline_results_copy = baseline_results.copy()
+        baseline_results_copy[x] = x_lim[0] if x_lim is not None else pltdata[x].min()
+        baseline_results[x] = x_lim[1] if x_lim is not None else pltdata[x].max()
+        baseline_results = pd.concat((baseline_results_copy, baseline_results), axis=0, ignore_index=True)
+        sns.lineplot(data=baseline_results, x=x, y=y, hue=hue, errorbar=errorbar, markers=False, ax=ax, palette=['k'])
+        plt_order = copy.deepcopy(legend_order)
+        plt_order.remove(baseline_method)
+    else:
+        plt_order = legend_order
+
     sns.lineplot(data=pltdata, x=x, y=y, hue=hue, style=hue, errorbar=errorbar, markers=True, ax=ax,
-                 hue_order=legend_order, style_order=legend_order, palette='colorblind', markersize=22)
+                 hue_order=plt_order, style_order=plt_order, palette='colorblind', markersize=22)
     ax.set_xlabel(x_label, fontdict={'fontsize': int(1.1 * fontsize)})
     ax.set_ylabel(y_label, fontdict={'fontsize': int(1.1 * fontsize)})
     if x_scale is not None:
@@ -123,6 +140,7 @@ def lineplot(pltdata, *, x: str, y: str,
         ax.set_xlim(x_lim)
     if y_lim is not None:
         ax.set_ylim(y_lim)
+    plt.tight_layout(pad=0.2)
 
     lgd_obj = ax.legend()
     lgd_obj.set_title(None)
@@ -181,13 +199,6 @@ def create_multicol_table_start_nc(table_data):
 
     out += "& " + titles + r"\\" + "\n" + r"\midrule" + "\n"
     return out
-
-
-def method_complexities():
-    # QMR-FS   & SVD-entropy     & LS             & SPEC           & USFSM                     & UDFS                    & NDFS                           & CNAFS & FMIUFS
-    out = r"""QMR-FS & SVD-entropy & LS & SPEC & USFSM & UDFS & NDFS & CNAFS & FMIUFS \\
-    Time complexity & $\bigO(n d^2)$ & $\bigO(n d^3)$  & $\bigO(n^2 d)$ & $\bigO(n^2 d)$ & $\bigO(n^3 d  + n^2 d^2)$  &  $\bigO(n^2 d + d^3)^*$ &  $\bigO(n^2 d  + n d^2 + d^3 + )^*$ & $\bigO(n^2 d  + n d^2 + d^3 + )^*$ & $\bigO(n^2 d   + n d^2)$ \\
-    """
 
 
 def get_thresholds_top_k(df, k_val: int):
@@ -310,11 +321,10 @@ def create_filter_mask(data: pd.DataFrame, dataset: str, tol: float, p: float, d
     return mask
 
 
-def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
+def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, dim: int, methods: List[str]):
     datasets = data['dataset'].unique()
     methods = set(methods)
     tol = {d: 0.01 for d in datasets}
-    dim = int(100 * p)
     dim_tol = 1
 
     finished_data = dict()
@@ -327,7 +337,8 @@ def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
         count = 0
         while set(filtered_data["method"].unique()) != methods:
             if count >= 10:
-                warnings.warn(f"Method difference {methods - set(filtered_data['method'].unique())} for tolerance of {p} for dataset {dataset}")
+                warnings.warn(
+                    f"Method difference {methods - set(filtered_data['method'].unique())} for tolerance of {p} for dataset {dataset}")
                 # raise RuntimeError(f"Could not find dim ratio with in tolerance of {p} for dataset {dataset}")
 
             if dataset == "isolet":
@@ -344,16 +355,15 @@ def filter_data_by_dim_ratio(data: pd.DataFrame, p: float, methods: List[str]):
     return finished_data
 
 
-def _get_avg_rank(data: pd.DataFrame, p: float, methods: List[str], score_name: str):
-    filtered_data = filter_data_by_dim_ratio(data, p=p, methods=methods)
+def _get_avg_rank(data: pd.DataFrame, p: float, dim: int, methods: List[str], score_name: str):
+    filtered_data = filter_data_by_dim_ratio(data, p=p, dim=dim, methods=methods)
     avg_data = filtered_data.groupby(["dataset", "method"], as_index=False).agg("mean")
     avg_data['rank'] = avg_data.groupby("dataset")[score_name].rank(method='dense', ascending=False)
     avg_rank = avg_data.groupby("method", as_index=True)['rank'].agg(['mean', 'std'])
     return avg_rank
 
 
-def create_comparison_table_data(datasets: Collection[str], methods: List[str]):
-    dim_ratios = [0.4, 0.6, 0.8]
+def create_comparison_table_data(datasets: Collection[str], methods: List[str], dim_ratios: List[tuple[float, int]]):
     cls_data = pd.read_json("results/data/main_experiment/factorize/classification.json", orient='records')
     cls_data = cls_data.loc[(cls_data['dataset'].isin(set(datasets))) & (cls_data['method'].isin(set(methods)))].copy()
 
@@ -361,15 +371,113 @@ def create_comparison_table_data(datasets: Collection[str], methods: List[str]):
     isolet_durations = clstr_data.loc[
         clstr_data["dataset"] == "isolet"
         ].groupby(["method"], as_index=True)["duration"].agg("mean")
-    clstr_data = clstr_data.loc[(clstr_data['dataset'].isin(set(datasets))) & (clstr_data['method'].isin(set(methods)))].copy()
+    clstr_data = clstr_data.loc[
+        (clstr_data['dataset'].isin(set(datasets))) & (clstr_data['method'].isin(set(methods)))].copy()
 
     cls_avg_rank_data = {}
     clstr_avg_rank_data = {}
-    for p in dim_ratios:
-        cls_avg_rank_data[int(100 * p)] = _get_avg_rank(cls_data, p=p, methods=methods, score_name='accuracy')
-        clstr_avg_rank_data[int(100 * p)] = _get_avg_rank(clstr_data, p=p, methods=methods, score_name='nmi')
+    for p, isolet_dim in dim_ratios:
+        cls_avg_rank_data[int(100 * p)] = _get_avg_rank(cls_data, p=p, dim=isolet_dim,
+                                                        methods=methods, score_name='accuracy')
+        clstr_avg_rank_data[int(100 * p)] = _get_avg_rank(clstr_data, p=p, dim=isolet_dim,
+                                                          methods=methods, score_name='nmi')
 
     return isolet_durations, cls_avg_rank_data, clstr_avg_rank_data
+
+
+def get_start_method_comparison(methods):
+    top_titles = [PRETTY_METHOD_NAMES[method_name] for method_name in methods]
+    layout = r"{@{}l|" + len(top_titles) * "c" + "@{}}"
+    out = "\\begin{{tabular}}{layout}".format(layout=layout) + "\n"
+    titles = " &".join(top_titles)
+    out += "& " + titles + r"\\" + "\n" + r"\midrule" + "\n"
+    return out
+
+
+def method_complexities(methods):
+    complexities = {
+        "qmrfs": r"$\bigO(n d^2)$",
+        "svd_entropy": r"$\bigO(n d^3)$",
+        "ls": r"$\bigO(n^2 d)$",
+        "spec": r"$\bigO(n^2 d)$",
+        "usfsm": r"$\bigO(n^3 d + n^2 d^2)$",
+        "udfs": r"$\bigO(n^2 d + d^3)^*$",
+        "ndfs": r"$\bigO(n^2 d + n d^2 + d^3)^*$",
+        "cnafs": r"$\bigO(n^2 d + n d^2 + d^3)^*$",
+        "fmiufs": r"$\bigO(n^2 d + n d^2)$"
+    }
+    out = r"Time complexity &" + " &".join([complexities[method] for method in methods]) + r"\\" + "\n"
+    return out
+
+
+def timeformat(duration: float):
+    td_duration = timedelta(seconds=duration)
+    hours, remainder = divmod(int(td_duration.total_seconds()), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if duration < 1:
+        out = f"{td_duration.microseconds // 1000}ms"
+    elif duration < 60:
+        out = f"{seconds}s"
+    elif duration < 3600:
+        out = f"{minutes}m {seconds}s"
+    elif hours < 5:
+        out = f"{hours}h {minutes}m"
+    else:
+        out = f"{hours}h"
+    return out
+
+
+def get_isolet_times(isolet_durations: pd.Series, methods: List[str]):
+    out = "Runtime (Isolet)"
+    qmrfs_time = isolet_durations['qmrfs'].item()
+    for method in methods:
+        if method == "qmrfs":
+            out += f" & {timeformat(qmrfs_time)}"
+        else:
+            ratio = int(np.round(isolet_durations[method].item() / qmrfs_time))
+            out += f" & " + r"$\times" + f"{ratio}$"
+    out += r"\\" + "\n"
+    return out
+
+
+def format_rank_data(rank_data: pd.DataFrame, methods: List[str], row_name: str):
+    out = row_name
+    for method in methods:
+        elm = tbl_elm(value=rank_data.loc[method, 'mean'], std=rank_data.loc[method, 'std'], num_decimal=1,
+                      is_best=False)
+        out += f" & {elm}"
+    out += r"\\" + "\n"
+    return out
+
+
+def make_comparison_table(datasets: Collection[str], methods: List[str]):
+    main_save_dir = "results/tables/main_res"
+    dim_ratios = [
+        (0.4, 50),
+        # (0.7, 70),
+        (0.8, 100),
+        # (0.9, 100)
+    ]
+    isolet_durations, cls_rank_data, clstr_rank_data = create_comparison_table_data(
+        datasets=datasets, methods=methods, dim_ratios=dim_ratios)
+
+    out = get_start_method_comparison(methods)
+    out += method_complexities(methods)
+    out += get_isolet_times(isolet_durations, methods=methods)
+    out += r"\midrule" + "\n"
+    out += format_rank_data(cls_rank_data[40], methods=methods, row_name=r"Clsif. avg. rank ($40$\%)")
+    out += format_rank_data(cls_rank_data[80], methods=methods, row_name=r"Clsif. avg. rank ($80$\%)")
+    out += r"\midrule" + "\n"
+    out += format_rank_data(clstr_rank_data[40], methods=methods, row_name=r"Clstr. avg. rank ($40$\%)")
+    out += format_rank_data(clstr_rank_data[80], methods=methods, row_name=r"Clstr. avg. rank ($80$\%)")
+
+    out += r"\bottomrule" + "\n" r"\end{tabular}"
+
+    os.makedirs(main_save_dir, exist_ok=True)
+    save_filename = os.path.join(main_save_dir, f"main_res.tex")
+    print(f"Saving to {save_filename}")
+    with open(save_filename, "w") as fp:
+        fp.write(out)
 
 
 def make_full_res_table(results_folder: str = "entropy_high2low_1-00e-01"):
@@ -389,7 +497,7 @@ def make_full_res_table(results_folder: str = "entropy_high2low_1-00e-01"):
         fp.write(tex_code)
 
 
-def make_comparison_table(mode):
+def make_comparison_table_old(mode):
     main_save_dir = "results/tables/rel_and_rank"
     qmr_res = pd.read_json(f"results/data/main_experiment/{mode}/rel_and_rank.json")
     qmr_res = qmr_res.reindex(index=['qmr'] + qmr_res.index[:-1].tolist())
