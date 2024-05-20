@@ -31,32 +31,32 @@ for data_id=dataset_ids
     disp('Running LS')
     start = tic;
     ls_I = ls_model(X);
-    ls_duration = toc;
+    ls_duration = toc(start);
     
     disp('Running SPEC')
     start = tic;
     spec_I = spec_model(X);
-    spec_duration = toc;
+    spec_duration = toc(start);
     
     disp('Running UDFS')
     start = tic;
     udfs_I = udfs_model(X);
-    udfs_duration = toc;
+    udfs_duration = toc(start);
     
     disp('Running NDFS')
     start = tic;
     ndfs_I = ndfs_model(X);
-    ndfs_duration = toc;
+    ndfs_duration = toc(start);
     
     disp('Running CNAFS')
     start = tic;
     cnafs_I = cnafs_model(X);
-    cnafs_duration = toc;
+    cnafs_duration = toc(start);
     
     disp('Running FMIUFS')
     start = tic;
     fmiufs_I = fmiufs_model(X);
-    fmiufs_duration = toc;
+    fmiufs_duration = toc(start);
 
     num_feat = size(X, 2);
     fprintf('dataset id: %d\n', data_id)

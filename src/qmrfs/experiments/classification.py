@@ -146,7 +146,7 @@ def run_classification_evaluation_on_precomputed_features(
             X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         full_dims = X_data.shape[1]
 
-        scores = evaluate_clf(X_data, y, seed=seed, num_reps=num_reps if dataset != 'isolet' else 2)
+        scores = evaluate_clf(X_data, y, seed=seed, num_reps=num_reps)
         scores = enrich_scores(
             scores,
             kwargs={
