@@ -83,7 +83,7 @@ def run_usfm_isolet_parallel():
 
 def run_save_baseline_selected_features_isolet():
     models = {
-        # "svd_entropy": svd_entropy_sr,
+        "svd_entropy": svd_entropy_sr,
         "usfsm": usfsm
     }
 
@@ -92,7 +92,6 @@ def run_save_baseline_selected_features_isolet():
         os.makedirs(save_folder, exist_ok=True)
         X_data, y = load_isolet()
         kvals = np.linspace(20, 100, 9).astype(np.int32)
-        kvals = np.linspace(50, 100, 6).astype(np.int32)
         print(kvals)
         for k in tqdm.tqdm(kvals):
             start = time.perf_counter()
@@ -115,11 +114,12 @@ def run_save_qmrfs_selected_features_isolet():
     os.makedirs(save_folder, exist_ok=True)
     X_data, y = load_isolet()
     # tolerances = np.concatenate((np.linspace(0.95, 0.05, 13), np.asarray([1e-2, 5e-3, 1e-3])))
-    tolerances = [0.8, 0.7725, 0.75, 0.7, 0.65, 0.6, 0.575, 0.55, 0.525, 0.5, 0.475, 0.45, 0.425, 0.4, 0.375, 0.35]
+    # tolerances = [0.8, 0.7725, 0.75, 0.7, 0.65, 0.6, 0.575, 0.55, 0.525, 0.5, 0.475, 0.45, 0.425, 0.4, 0.375, 0.35]
+    tolerances = [0.8, 0.78, 0.75, 0.725, 0.7, 0.65, 0.63, 0.6, 0.573, 0.55, 0.525, 0.5, 0.47, 0.46, 0.424, 0.41, 0.39, 0.37, 0.365, 0.35, 0.325, 0.3]
     for tol in tqdm.tqdm(tolerances):
         start = time.perf_counter()
         pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low',
-                                      feature_translation='non-negative')
+                                      feature_translation='const-vector')
         duration = time.perf_counter() - start
         res = {
             "X_red": pruned_x,
@@ -145,7 +145,7 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
         for tol in tolerances:
             start = time.perf_counter()
             pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low',
-                                          feature_translation='non-negative')
+                                          feature_translation='const-vector')
             duration = time.perf_counter() - start
             res = {
                 "X_red": pruned_x,
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     # run_save_qmrfs_selected_features(use_factorize_categorical=True)
 
-    # run_save_qmrfs_selected_features_isolet()
+    run_save_qmrfs_selected_features_isolet()
     # run_save_baseline_selected_features_isolet()
 
-    run_usfm_isolet_parallel()
+    # run_usfm_isolet_parallel()

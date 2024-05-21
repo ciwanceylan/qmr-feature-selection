@@ -9,12 +9,12 @@ SortingStrategy = Literal[
     # 'mm_score_low2high', 'mm_score_high2low', 'first_high_entropy_then_random'
 ]
 
-TranslationMode = Literal['none', 'centre', 'non-negative']
+TranslationMode = Literal['none', 'centre', 'non-negative', 'const-vector']
 
 
 class QMRFeatureSelector:
 
-    def __init__(self, tolerance: float, feature_translation: TranslationMode = 'non-negative'):
+    def __init__(self, tolerance: float, feature_translation: TranslationMode):
         self.tolerance = tolerance
         self.feature_translation = feature_translation
         self.recon_errors_ = None
@@ -28,11 +28,17 @@ class QMRFeatureSelector:
         elif self.feature_translation == 'non-negative':
             translation, _ = torch.min(features, dim=0, keepdim=True)
             features -= translation
+        elif self.feature_translation == 'const-vector':
+            ones = torch.ones((features.shape[0], 1), dtype=features.dtype, device=features.device)
+            features = torch.cat((ones, features), dim=1)
+            translation = torch.zeros((1, features.shape[1]), dtype=features.dtype, device=features.device)
         elif self.feature_translation == 'none':
             pass
         columns_to_keep_mask, recon_errors, feature_norms = core.get_keep_columns_qr(
             features, tolerance=self.tolerance
         )
+        if self.feature_translation == 'const-vector':
+            columns_to_keep_mask[0] = 0
         self.recon_errors_ = np.asarray(recon_errors)
         self.feature_norms_ = np.asarray(feature_norms)
 
