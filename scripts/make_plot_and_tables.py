@@ -171,13 +171,13 @@ if __name__ == "__main__":
                 # "zoo",
                 "isolet"]
 
-    methods = ["baseline_full", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
-    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
-    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
-    #
+    # methods = ["baseline_full", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    # make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
+    # make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
+    # #
 
-    # methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
-    # resproc.make_comparison_table(datasets=datasets, methods=methods)
+    methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    resproc.make_comparison_table(datasets=datasets, methods=methods)
 
 
 

@@ -142,7 +142,7 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
             save_folder = os.path.join(f"baseline_features/{info.uci_id}/dummy/qmrfs")
         os.makedirs(save_folder, exist_ok=True)
         X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
-        tolerances = np.concatenate((np.linspace(0.95, 0.05, 25), np.asarray([1e-2, 5e-3, 1e-3])))
+        tolerances = np.concatenate((np.linspace(0.95, 0.05, 31), np.asarray([1e-2, 5e-3, 1e-3])))
         for tol in tolerances:
             start = time.perf_counter()
             pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low',
@@ -162,11 +162,11 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
 
 if __name__ == "__main__":
     # save_datafiles_as_mat()
-    run_save_baseline_selected_features(use_factorize_categorical=True)
 
     run_save_qmrfs_selected_features(use_factorize_categorical=True)
+    # run_save_qmrfs_selected_features_isolet()
 
-    run_save_qmrfs_selected_features_isolet()
-    run_save_baseline_selected_features_isolet()
+    # run_save_baseline_selected_features(use_factorize_categorical=True)
+    # run_save_baseline_selected_features_isolet()
 
     # run_usfm_isolet_parallel()

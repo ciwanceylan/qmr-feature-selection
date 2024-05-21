@@ -5,13 +5,15 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-import qmrfs.experiments.utils as utils
 import qmrfs.qmr_feature_selection as qmrfs
 import torch
 
 
 def load_us_census():
-    return utils.load_dataset(dataset_id=116)
+    df = pd.read_csv("datasets/uscensus_data/USCensus1990.data.txt", header=0, index_col=False)
+    df = df.drop(columns=["caseid"])
+    data = df.to_numpy().astype(np.float32)
+    return data
 
 
 def load_snap_patents():
@@ -125,7 +127,7 @@ def main(dataset: str, device: str):
     elif dataset == "kddcup99":
         X_data, y = load_kddcup1999()
     elif dataset == "us_census":
-        X_data, _, y = load_us_census()
+        X_data = load_us_census()
     elif dataset == "snap_patents":
         X_data, y = load_snap_patents()
     else:
