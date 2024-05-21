@@ -395,17 +395,30 @@ def get_start_method_comparison(methods):
 
 
 def method_complexities(methods):
+    # complexities = {
+    #     "qmrfs": r"$\bigO(n d^2)$",
+    #     "svd_entropy": r"$\bigO(n d^3)$",
+    #     "ls": r"$\bigO(n^2 d)$",
+    #     "spec": r"$\bigO(n^2 d)$",
+    #     "usfsm": r"$\bigO(n^3 d + n^2 d^2)$",
+    #     "udfs": r"$\bigO(n^2 d + d^3)^*$",
+    #     "ndfs": r"$\bigO(n^2 d + n d^2 + d^3)^*$",
+    #     "cnafs": r"$\bigO(n^2 d + n d^2 + d^3)^*$",
+    #     "fmiufs": r"$\bigO(n^2 d + n d^2)$"
+    # }
+
     complexities = {
         "qmrfs": r"$\bigO(n d^2)$",
         "svd_entropy": r"$\bigO(n d^3)$",
         "ls": r"$\bigO(n^2 d)$",
         "spec": r"$\bigO(n^2 d)$",
-        "usfsm": r"$\bigO(n^3 d + n^2 d^2)$",
-        "udfs": r"$\bigO(n^2 d + d^3)^*$",
-        "ndfs": r"$\bigO(n^2 d + n d^2 + d^3)^*$",
-        "cnafs": r"$\bigO(n^2 d + n d^2 + d^3)^*$",
-        "fmiufs": r"$\bigO(n^2 d + n d^2)$"
+        "usfsm": r"$\bigO(n^3 d)$",
+        "udfs": r"$\bigO(n^2 d)^*$",
+        "ndfs": r"$\bigO(n^2 d)^*$",
+        "cnafs": r"$\bigO(n^2 d)^*$",
+        "fmiufs": r"$\bigO(n^2 d)$"
     }
+
     out = r"Time complexity &" + " &".join([complexities[method] for method in methods]) + r"\\" + "\n"
     return out
 
@@ -455,7 +468,7 @@ def make_comparison_table(datasets: Collection[str], methods: List[str]):
     dim_ratios = [
         (0.4, 50),
         # (0.7, 70),
-        (0.8, 100),
+        (0.6, 100),
         # (0.9, 100)
     ]
     isolet_durations, cls_rank_data, clstr_rank_data = create_comparison_table_data(
@@ -466,10 +479,10 @@ def make_comparison_table(datasets: Collection[str], methods: List[str]):
     out += get_isolet_times(isolet_durations, methods=methods)
     out += r"\midrule" + "\n"
     out += format_rank_data(cls_rank_data[40], methods=methods, row_name=r"Clsif. avg. rank ($40$\%)")
-    out += format_rank_data(cls_rank_data[80], methods=methods, row_name=r"Clsif. avg. rank ($80$\%)")
+    out += format_rank_data(cls_rank_data[60], methods=methods, row_name=r"Clsif. avg. rank ($60$\%)")
     out += r"\midrule" + "\n"
     out += format_rank_data(clstr_rank_data[40], methods=methods, row_name=r"Clstr. avg. rank ($40$\%)")
-    out += format_rank_data(clstr_rank_data[80], methods=methods, row_name=r"Clstr. avg. rank ($80$\%)")
+    out += format_rank_data(clstr_rank_data[60], methods=methods, row_name=r"Clstr. avg. rank ($60$\%)")
 
     out += r"\bottomrule" + "\n" r"\end{tabular}"
 

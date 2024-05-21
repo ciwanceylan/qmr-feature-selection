@@ -3,86 +3,85 @@ Device:  cpu
 Num. instances:  2458285
 Num. features:  68
 Num end dim.:  66
-Avg. duration:  4.650676228499924
-Std. duration:  0.14189783052744795
-Median duration:  4.601977795500034
-Max duration:  5.073248322999916
-Min duration:  4.581894435999857
+Avg. duration:  4.164047769499848
+Std. duration:  0.15691001566438986
+Median duration:  4.094159849499647
+Max duration:  4.576453572999526
+Min duration:  4.070044164000137
 
 Dataset:  us_census
 Device:  cuda
 Num. instances:  2458285
 Num. features:  68
 Num end dim.:  66
-Avg. duration:  3.133567958899948
-Std. duration:  0.07412198010026363
-Median duration:  3.1127731480000875
-Max duration:  3.227029983999728
-Min duration:  2.9902019090000067
+Avg. duration:  2.7476878532001137
+Std. duration:  0.11258447138933896
+Median duration:  2.7104991424998843
+Max duration:  3.0842132309999215
+Min duration:  2.6947861329999796
 
 Dataset:  musae_git
 Device:  cpu
 Num. instances:  37700
 Num. features:  4006
-Num end dim.:  3800
-Avg. duration:  29.133910943799993
-Std. duration:  0.2673250130194895
-Median duration:  29.185797441999966
-Max duration:  29.530029790999833
-Min duration:  28.759664233999956
+Num end dim.:  3799
+Avg. duration:  28.524672329199984
+Std. duration:  0.18475013667450715
+Median duration:  28.4766625405
+Max duration:  28.952354703999845
+Min duration:  28.287229612000374
 
 Dataset:  musae_git
 Device:  cuda
 Num. instances:  37700
 Num. features:  4006
-Num end dim.:  3800
-Avg. duration:  13.37237182300014
-Std. duration:  0.43033984423629945
-Median duration:  13.431163508500049
-Max duration:  13.874080097999922
-Min duration:  12.228405214000304
+Num end dim.:  3799
+Avg. duration:  13.869118504000017
+Std. duration:  0.4496562509882317
+Median duration:  13.85272493650018
+Max duration:  14.431899064999925
+Min duration:  12.72038912500011
 
 Dataset:  kddcup99
 Device:  cpu
 Num. instances:  7882585
 Num. features:  127
-Num end dim.:  112
-Avg. duration:  32.94350070840001
-Std. duration:  0.22292122912812837
-Median duration:  32.875587329000155
-Max duration:  33.474653553999815
-Min duration:  32.68921185099998
+Num end dim.:  111
+Avg. duration:  33.917508072199965
+Std. duration:  0.11692719409071682
+Median duration:  33.91299890150003
+Max duration:  34.08635970500018
+Min duration:  33.73040378400037
 
 Dataset:  kddcup99
 Device:  cuda
 Num. instances:  7882585
 Num. features:  127
-Num end dim.:  112
-Avg. duration:  20.114733703999992
-Std. duration:  0.053049614362360026
-Median duration:  20.09632807600019
-Max duration:  20.215602554999805
-Min duration:  20.059840989999884
+Num end dim.:  111
+Avg. duration:  20.237483549399894
+Std. duration:  0.06400214645928662
+Median duration:  20.215050197999517
+Max duration:  20.393181714000093
+Min duration:  20.15691192400027
 
 Dataset:  snap_patents
 Device:  cpu
 Num. instances:  2923922
 Num. features:  269
 Num end dim.:  259
-Avg. duration:  25.9709972741
-Std. duration:  0.3162453554546722
-Median duration:  25.83050586950003
-Max duration:  26.71950392000008
-Min duration:  25.630110783999953
+Avg. duration:  26.41712306239997
+Std. duration:  0.24986365574375966
+Median duration:  26.30727467600036
+Max duration:  26.86829904499973
+Min duration:  26.140794425999957
 
 Dataset:  snap_patents
 Device:  cuda
 Num. instances:  2923922
 Num. features:  269
-Num end dim.:  259
-Avg. duration:  13.60046170219989
-Std. duration:  0.09417995508039947
-Median duration:  13.566618966500073
-Max duration:  13.825270961000115
-Min duration:  13.491622579999785
-
+Num end dim.:  258
+Avg. duration:  13.741216355699908
+Std. duration:  0.06477389088066449
+Median duration:  13.731375722500161
+Max duration:  13.87295906700001
+Min duration:  13.625662104000185
