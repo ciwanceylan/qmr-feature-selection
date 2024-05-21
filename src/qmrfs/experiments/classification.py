@@ -139,7 +139,7 @@ def run_classification_evaluation_on_precomputed_features(
 
     for dataset, info in tqdm.tqdm(dataset_info.items(), total=len(dataset_info)):
         if verbose:
-            print(f"Running clustering for dataset {dataset}")
+            print(f"Running classification for dataset {dataset}")
         if dataset == 'isolet':
             X_data, y = utils.load_isolet()
         else:
