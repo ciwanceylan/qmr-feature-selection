@@ -37,7 +37,7 @@ class QMRFeatureSelector:
         columns_to_keep_mask, recon_errors, feature_norms = core.get_keep_columns_qr(
             features, tolerance=self.tolerance
         )
-        if self.feature_translation == 'const-vector':
+        if self.feature_translation == 'const-vector' and columns_to_keep_mask.sum() > 1:
             columns_to_keep_mask[0] = 0
         self.recon_errors_ = np.asarray(recon_errors)
         self.feature_norms_ = np.asarray(feature_norms)

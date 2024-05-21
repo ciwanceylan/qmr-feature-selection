@@ -57,6 +57,7 @@ def run_save_baseline_selected_features(use_factorize_categorical: bool):
 
 
 def run_usfm_isolet_parallel():
+    """ For extra parallelization for USFSM since it is so slow. """
     save_folder = os.path.join(f"baseline_features/isolet/usfsm")
     os.makedirs(save_folder, exist_ok=True)
     X_data, y = load_isolet()
@@ -161,11 +162,11 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
 
 if __name__ == "__main__":
     # save_datafiles_as_mat()
-    # run_save_baseline_selected_features(use_factorize_categorical=True)
+    run_save_baseline_selected_features(use_factorize_categorical=True)
 
-    # run_save_qmrfs_selected_features(use_factorize_categorical=True)
+    run_save_qmrfs_selected_features(use_factorize_categorical=True)
 
     run_save_qmrfs_selected_features_isolet()
-    # run_save_baseline_selected_features_isolet()
+    run_save_baseline_selected_features_isolet()
 
     # run_usfm_isolet_parallel()
