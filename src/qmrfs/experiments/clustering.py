@@ -66,16 +66,18 @@ def run_clustering_experiment(tolerance: Union[float, Literal['auto']], sorting_
         total_rel_error = total_error / total_feature_norm if total_feature_norm > 0.0 else 0.0
         max_rel_error = np.max(recon_errors / feature_norms).item() if len(recon_errors) > 0 else 0.0
 
-        full_score, full_score_std = evaluate_clustering(X_data, y, seed=seed)
-        red_score, red_score_std = evaluate_clustering(pruned_x, y, seed=seed)
+        full_scores = evaluate_clustering(X_data, y, seed=seed)
+        red_scores = evaluate_clustering(pruned_x, y, seed=seed)
+        full_scores = [s['nmi'] for s in full_scores]
+        red_scores = [s['nmi'] for s in red_scores]
 
         abs_scores.append({
             "ref_val": utils.DATASET_INFO[dataset].nmi_ref,
-            "full_mean": full_score,
-            "full_std": full_score_std,
-            "red_mean": red_score,
-            "red_std": red_score_std,
-            "rel_score": red_score / full_score,
+            "full_mean": np.mean(full_scores),
+            "full_std": np.std(full_scores),
+            "red_mean": np.mean(red_scores),
+            "red_std": np.std(red_scores),
+            "rel_score": np.mean(red_scores) / np.mean(full_scores),
             "full_dim": X_data.shape[1],
             "red_dim": pruned_x.shape[1],
             "dim_ratio": pruned_x.shape[1] / X_data.shape[1],
@@ -90,7 +92,7 @@ def run_clustering_experiment(tolerance: Union[float, Literal['auto']], sorting_
             "max_rel_error": max_rel_error
         })
 
-        rel_scores[dataset] = red_score / full_score
+        rel_scores[dataset] = np.mean(red_scores) / np.mean(full_scores)
     return pd.DataFrame(abs_scores), pd.Series(rel_scores)
 
 

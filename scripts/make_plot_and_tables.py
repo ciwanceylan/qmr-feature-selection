@@ -1,6 +1,7 @@
 import os
 from typing import Literal, Set, Collection, List
 import pandas as pd
+import numpy as np
 import qmrfs.results.results_processing as resproc
 from qmrfs.qmr_feature_selection import TranslationMode, SortingStrategy
 import glob
@@ -103,7 +104,8 @@ def plot_tol_sens_sorting(
         cat_pp_mode: Literal['factorize', 'dummy'],
         sorting_strategies: Collection[SortingStrategy],
         translate_mode: TranslationMode,
-        exclude_datasets: Collection[str] = None
+        include_datasets: Collection[str],
+        exclude_datasets: Collection[str]
 ):
     if exclude_datasets is None:
         exclude_datasets = set()
@@ -113,15 +115,18 @@ def plot_tol_sens_sorting(
     y_label = "Acc. ratio" if mode == 'classification' else "NMI ratio"
 
     df["sorting_model"] = df["sorting_strategy"]
-    df.loc[df["sorting_strategy"].str.contains('random'), "sorting_model"] += df["feature_order_seed"].astype(str)
+    df.loc[df["sorting_strategy"].str.contains('random'), "sorting_model"] += df["feature_order_seed"].map(lambda x: "" if np.isnan(x) else str(int(x)))
 
+    df = df.loc[df["dataset"].isin(include_datasets)].copy()
     df = df.loc[~df["dataset"].isin(exclude_datasets)].copy()
     df = df.loc[df["sorting_strategy"].isin(sorting_strategies)].copy()
 
     resproc.lineplot(
         df, x="tolerance", x_label=r"$\theta$", y="rel_score", y_label=y_label,
-        x_scale="log", y_lim=(0.0, 1.5), hue="sorting_model", errorbar='se',
-        save_path=os.path.join(save_folder, "sorting_theta")
+        x_scale="log",
+        # y_lim=(0.0, 1.5),
+        hue="sorting_model", errorbar='se',
+        save_path=os.path.join(save_folder, "sorting_theta"), legend_order=sorted(df["sorting_model"].unique())
     )
 
     # resproc.scatterplot(
@@ -176,8 +181,8 @@ if __name__ == "__main__":
     # make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
     # #
 
-    methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
-    resproc.make_comparison_table(datasets=datasets, methods=methods)
+    # methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    # resproc.make_comparison_table(datasets=datasets, methods=methods)
 
 
 
@@ -192,26 +197,27 @@ if __name__ == "__main__":
 
     # plot_tolerance_sensitivity()
 
-    # for translate_mode in ['none', 'centre', 'non-negative']:
-    #     for cat_pp_mode in ['factorize', 'dummy']:
-    #         plot_tol_sens_sorting('classification', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-    #                               sorting_strategies={'entropy_high2low', 'random', 'default'})
-    #         plot_tol_sens_sorting('clustering', cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-    #                               sorting_strategies={'entropy_high2low', 'random', 'default'})
+
+    plot_tol_sens_sorting('classification', cat_pp_mode='factorize', translate_mode='const-vector',
+                          sorting_strategies={'entropy_high2low', 'random', 'default'},
+                          include_datasets=set(datasets), exclude_datasets={})
+    plot_tol_sens_sorting('clustering', cat_pp_mode='factorize', translate_mode='const-vector',
+                          sorting_strategies={'entropy_high2low', 'random', 'default'},
+                          include_datasets=set(datasets), exclude_datasets={})
+
+    # plot_tol_sens_single_sorting_model('clustering', sorting_model='entropy_low2high', exclude_datasets={'sonar'})
+
+    # plot_tol_sens_single_sorting_model(
+    #     'classification', sorting_model='entropy_high2low',
+    #     cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
+    #     exclude_datasets=None
+    # )
     #
-    #         # plot_tol_sens_single_sorting_model('clustering', sorting_model='entropy_low2high', exclude_datasets={'sonar'})
-    #
-    #         plot_tol_sens_single_sorting_model(
-    #             'classification', sorting_model='entropy_high2low',
-    #             cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-    #             exclude_datasets=None
-    #         )
-    #
-    #         plot_tol_sens_single_sorting_model(
-    #             'clustering', sorting_model='entropy_high2low',
-    #             cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-    #             exclude_datasets=None
-    #         )
+    # plot_tol_sens_single_sorting_model(
+    #     'clustering', sorting_model='entropy_high2low',
+    #     cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
+    #     exclude_datasets=None
+    # )
 
     #
     # plot_tol_sens_single_sorting_model(

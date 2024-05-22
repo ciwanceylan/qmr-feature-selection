@@ -82,16 +82,18 @@ def run_classification_experiment(tolerance: Union[float, Literal['auto']], sort
         total_rel_error = total_error / total_feature_norm if total_feature_norm > 0.0 else 0.0
         max_rel_error = np.max(recon_errors / feature_norms).item() if len(recon_errors) > 0 else 0.0
 
-        full_score, full_score_std = evaluate_clf(X_data, y, seed=seed)
-        red_score, red_score_std = evaluate_clf(pruned_x, y, seed=seed)
+        full_scores = evaluate_clf(X_data, y, seed=seed, num_reps=3)
+        red_scores = evaluate_clf(pruned_x, y, seed=seed, num_reps=3)
+        full_scores = [s['accuracy'] for s in full_scores]
+        red_scores = [s['accuracy'] for s in red_scores]
 
         abs_scores.append({
             "ref_val": utils.DATASET_INFO[dataset].acc_ref,
-            "full_mean": full_score,
-            "full_std": full_score_std,
-            "red_mean": red_score,
-            "red_std": red_score_std,
-            "rel_score": red_score / full_score,
+            "full_mean": np.mean(full_scores),
+            "full_std": np.std(full_scores),
+            "red_mean": np.mean(red_scores),
+            "red_std": np.std(red_scores),
+            "rel_score": np.mean(red_scores) / np.mean(full_scores),
             "full_dim": X_data.shape[1],
             "red_dim": pruned_x.shape[1],
             "dim_ratio": pruned_x.shape[1] / X_data.shape[1],
@@ -106,7 +108,7 @@ def run_classification_experiment(tolerance: Union[float, Literal['auto']], sort
             "max_rel_error": max_rel_error
         })
 
-        rel_scores[dataset] = red_score / full_score
+        rel_scores[dataset] = np.mean(red_scores) / np.mean(full_scores)
 
     return pd.DataFrame(abs_scores), pd.Series(rel_scores)
 

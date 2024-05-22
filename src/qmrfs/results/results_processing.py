@@ -74,7 +74,8 @@ def save_all_formats(figure: plt.Figure, save_path: str):
 def make_legend_pretty(legend_obj, pretty_names: Dict[str, str]):
     legend_obj.set_title(None)
     for legend_text in legend_obj.texts:
-        legend_text.set_text(pretty_names[legend_text.get_text()])
+        text = legend_text.get_text()
+        legend_text.set_text(pretty_names.get(text, text))
 
 
 def handle_legend(ax: plt.Axes, seperate_legend: bool, legend_order: List[str], figsize=(36, 2), ncols=10):
