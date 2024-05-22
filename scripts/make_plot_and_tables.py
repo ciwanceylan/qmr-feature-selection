@@ -22,6 +22,18 @@ def load_tol_sens_data(mode: Literal['classification', 'clustering'], cat_pp_mod
 def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'],
                                     cat_pp_mode: Literal['factorize', 'dummy'],
                                     methods: List[str]):
+    y_lims = {
+        'classification': {
+            'heart-statlog': (0.6, 0.92),
+            'wine': (0.7, 1.05)
+        },
+        'clustering': {
+            'automobile': (0.1, 0.3),
+            'heart-c': (0.05, 0.25),
+            'sonar': (-0.01, 0.088),
+            'wine': (0.25, 1.05)
+        }
+    }
     data = pd.read_json(f"./results/data/main_experiment/{cat_pp_mode}/{mode}.json")
 
     # data = data.loc[(data['dim_ratio'] < 0.99) & (data['dim_ratio'] > 0.18)].copy()
@@ -46,7 +58,8 @@ def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'
         else:
             fig, ax = resproc.lineplot(
                 plt_data, x="percent_dim_kept", x_label=r"\% features kept", y=y, y_label=y_label, x_lim=(18, 100),
-                hue="method", errorbar="sd", legend_order=methods, fontsize_legend=34, fontsize=48,
+                y_lim=y_lims[mode].get(dataset_name, None), hue="method", errorbar="sd", legend_order=methods,
+                fontsize_legend=34, fontsize=48,
                 save_path=os.path.join(save_folder, mode), seperate_legend=True, baseline_method='baseline_full'
             )
             plt.close(fig)
@@ -115,7 +128,8 @@ def plot_tol_sens_sorting(
     y_label = "Acc. ratio" if mode == 'classification' else "NMI ratio"
 
     df["sorting_model"] = df["sorting_strategy"]
-    df.loc[df["sorting_strategy"].str.contains('random'), "sorting_model"] += df["feature_order_seed"].map(lambda x: "" if np.isnan(x) else str(int(x)))
+    df.loc[df["sorting_strategy"].str.contains('random'), "sorting_model"] += df["feature_order_seed"].map(
+        lambda x: "" if np.isnan(x) else str(int(x)))
 
     df = df.loc[df["dataset"].isin(include_datasets)].copy()
     df = df.loc[~df["dataset"].isin(exclude_datasets)].copy()
@@ -176,53 +190,17 @@ if __name__ == "__main__":
                 # "zoo",
                 "isolet"]
 
-    # methods = ["baseline_full", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
-    # make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
-    # make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
-    # #
-
-    # methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
-    # resproc.make_comparison_table(datasets=datasets, methods=methods)
-
-
-
-    # isolet_durations, cls_avg_rank_data, clstr_avg_rank_data = resproc.create_comparison_table_data(datasets=datasets, methods=methods)
-    # print(isolet_durations)
-    # print(cls_avg_rank_data)
-    # print(clstr_avg_rank_data)
-
-    # resproc.make_comparison_table("classification")
-    # resproc.make_comparison_table("clustering")
-    # resproc.make_full_res_table()
-
-    # plot_tolerance_sensitivity()
-
-
-    plot_tol_sens_sorting('classification', cat_pp_mode='factorize', translate_mode='const-vector',
-                          sorting_strategies={'entropy_high2low', 'random', 'default'},
-                          include_datasets=set(datasets), exclude_datasets={})
-    plot_tol_sens_sorting('clustering', cat_pp_mode='factorize', translate_mode='const-vector',
-                          sorting_strategies={'entropy_high2low', 'random', 'default'},
-                          include_datasets=set(datasets), exclude_datasets={})
-
-    # plot_tol_sens_single_sorting_model('clustering', sorting_model='entropy_low2high', exclude_datasets={'sonar'})
-
-    # plot_tol_sens_single_sorting_model(
-    #     'classification', sorting_model='entropy_high2low',
-    #     cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-    #     exclude_datasets=None
-    # )
+    methods = ["baseline_full", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
+    make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
     #
-    # plot_tol_sens_single_sorting_model(
-    #     'clustering', sorting_model='entropy_high2low',
-    #     cat_pp_mode=cat_pp_mode, translate_mode=translate_mode,
-    #     exclude_datasets=None
-    # )
 
-    #
-    # plot_tol_sens_single_sorting_model(
-    #     'clustering', sorting_model='entropy_high2low',
-    #     exclude_datasets={'sonar'}
-    # )
+    methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    resproc.make_comparison_table(datasets=datasets, methods=methods)
 
-    # plot_tol_sens_single_sorting_model('clustering', sorting_model='default', exclude_datasets={'sonar'})
+    # plot_tol_sens_sorting('classification', cat_pp_mode='factorize', translate_mode='const-vector',
+    #                       sorting_strategies={'entropy_high2low', 'random', 'default'},
+    #                       include_datasets=set(datasets), exclude_datasets={})
+    # plot_tol_sens_sorting('clustering', cat_pp_mode='factorize', translate_mode='const-vector',
+    #                       sorting_strategies={'entropy_high2low', 'random', 'default'},
+    #                       include_datasets=set(datasets), exclude_datasets={})
