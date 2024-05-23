@@ -14,6 +14,8 @@ def switch_cols(matrix, col1, col2):
 
 
 def calc_pivot_norm(Q, M, R, pivot_row, col):
+    # Columns beyond `col` in Q and rows below `col` in M do not need to be used since those rows in M will always be
+    # zero. This small optimization is excluded from the paper for clarity of presentation.
     vector_from_pivots = Q[:, :col + 1] @ (M[:col + 1, pivot_row:col + 1] @ R[pivot_row:col + 1, col])
     pivot_norm = torch.linalg.norm(vector_from_pivots)
     return pivot_norm
