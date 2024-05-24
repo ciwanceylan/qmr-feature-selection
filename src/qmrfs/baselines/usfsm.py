@@ -78,7 +78,8 @@ def gamma_function(spectrum: np.ndarray, k: int):
     return gamma
 
 
-@nb.jit(nb.types.Tuple((nb.float32[:, :], nb.bool_[::1]))(nb.types.Array(nb.types.float32, 2, 'A', readonly=True), nb.int64), nopython=True, nogil=True)
+@nb.jit(nb.types.Tuple((nb.float32[:, :], nb.bool_[::1]))(
+    nb.types.Array(nb.types.float32, 2, 'A', readonly=True), nb.int64), nopython=True, nogil=True)
 def usfsm_(features: np.ndarray, k: int):
     num_feat = features.shape[1]
     keep_mask = np.ones((num_feat,), dtype=np.bool_)

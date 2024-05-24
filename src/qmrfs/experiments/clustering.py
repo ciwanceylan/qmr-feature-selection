@@ -39,24 +39,22 @@ def evaluate_clustering(features, y, seed: int, num_reps: int = 25):
 
 
 def run_clustering_experiment(tolerance: Union[float, Literal['auto']], sorting_strategy: qmrfs.SortingStrategy,
-                              feature_translation: qmrfs.TranslationMode, seed: int, use_factorize_categorical: bool,
-                              feature_order_seed: Optional[int] = None, verbose: bool = False):
+                              seed: int, use_factorize_categorical: bool, feature_order_seed: Optional[int] = None,
+                              verbose: bool = False):
     if verbose:
         print("Clustering evaluation")
     rel_scores = dict()
     abs_scores = []
 
     for dataset, info in tqdm.tqdm(utils.DATASET_INFO.items(), total=len(utils.DATASET_INFO)):
-        tol = utils.DATASET2THETA[dataset] if tolerance == 'auto' else tolerance
         if verbose:
             print(f"Running clustering for dataset {dataset}")
         X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         start = time.perf_counter()
         pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
             X_data,
-            tolerance=tol,
+            tolerance=tolerance,
             sorting_strategy=sorting_strategy,
-            feature_translation=feature_translation,
             seed=feature_order_seed
         )
         duration = time.perf_counter() - start

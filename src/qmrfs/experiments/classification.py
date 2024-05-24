@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.svm import LinearSVC
 from scipy.io import loadmat
 import tqdm
@@ -44,18 +44,13 @@ def evaluate_clf(features, y, num_reps: int, seed: int):
                 scores.append({"accuracy": score, "seed": seed_, "split": j})
         return scores
 
-    # all_scores = []
-    # for i, seed_ in enumerate(seeds):
-    #     all_scores += train(features_std, y, seed_)
-
     all_scores = Parallel(n_jobs=num_reps)(delayed(train)(features_std, y, seed_) for seed_ in seeds)
     all_scores = sum(all_scores, [])
     return all_scores
 
 
 def run_classification_experiment(tolerance: Union[float, Literal['auto']], sorting_strategy: qmrfs.SortingStrategy,
-                                  feature_translation: qmrfs.TranslationMode, seed: int,
-                                  use_factorize_categorical: bool, feature_order_seed: Optional[int] = None,
+                                  seed: int, use_factorize_categorical: bool, feature_order_seed: Optional[int] = None,
                                   verbose: bool = False):
     if verbose:
         print("Classification evaluation")
@@ -63,16 +58,14 @@ def run_classification_experiment(tolerance: Union[float, Literal['auto']], sort
     abs_scores = []
 
     for dataset, info in tqdm.tqdm(utils.DATASET_INFO.items(), total=len(utils.DATASET_INFO)):
-        tol = utils.DATASET2THETA[dataset] if tolerance == 'auto' else tolerance
         if verbose:
             print(f"Running classification for dataset {dataset}")
         X_data, X_orig, y = utils.load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
         start = time.perf_counter()
         pruned_x, recon_errors, feature_norms = qmrfs.qmr_fs(
             X_data,
-            tolerance=tol,
+            tolerance=tolerance,
             sorting_strategy=sorting_strategy,
-            feature_translation=feature_translation,
             seed=feature_order_seed
         )
         duration = time.perf_counter() - start

@@ -6,7 +6,6 @@ from scipy.io import savemat
 from joblib import Parallel, delayed
 import qmrfs.experiments.utils as utils
 from qmrfs.experiments.utils import DATASET_INFO, DATA_CACHE_LOCATION, load_dataset, load_isolet
-# from qmrfs.baselines.fsfs import fsfs
 from qmrfs.baselines.svd_entropy import svd_entropy_sr
 from qmrfs.baselines.usfsm import usfsm, usfsm_
 import qmrfs.qmr_feature_selection as qmrfs
@@ -116,11 +115,11 @@ def run_save_qmrfs_selected_features_isolet():
     X_data, y = load_isolet()
     # tolerances = np.concatenate((np.linspace(0.95, 0.05, 13), np.asarray([1e-2, 5e-3, 1e-3])))
     # tolerances = [0.8, 0.7725, 0.75, 0.7, 0.65, 0.6, 0.575, 0.55, 0.525, 0.5, 0.475, 0.45, 0.425, 0.4, 0.375, 0.35]
-    tolerances = [0.8, 0.78, 0.75, 0.725, 0.7, 0.65, 0.63, 0.6, 0.573, 0.55, 0.525, 0.5, 0.47, 0.46, 0.424, 0.41, 0.39, 0.37, 0.365, 0.35, 0.325, 0.3]
+    tolerances = [0.8, 0.78, 0.75, 0.725, 0.7, 0.65, 0.63, 0.6, 0.573, 0.55, 0.525, 0.5, 0.47, 0.46, 0.424, 0.41, 0.39,
+                  0.37, 0.365, 0.35, 0.325, 0.3]
     for tol in tqdm.tqdm(tolerances):
         start = time.perf_counter()
-        pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low',
-                                      feature_translation='const-vector')
+        pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low')
         duration = time.perf_counter() - start
         res = {
             "X_red": pruned_x,
@@ -145,8 +144,7 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
         tolerances = np.concatenate((np.linspace(0.95, 0.05, 31), np.asarray([1e-2, 5e-3, 1e-3])))
         for tol in tolerances:
             start = time.perf_counter()
-            pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low',
-                                          feature_translation='const-vector')
+            pruned_x, _, _ = qmrfs.qmr_fs(X_data, tolerance=tol, sorting_strategy='entropy_high2low')
             duration = time.perf_counter() - start
             res = {
                 "X_red": pruned_x,
@@ -161,12 +159,12 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
 
 
 if __name__ == "__main__":
-    # save_datafiles_as_mat()
+    save_datafiles_as_mat()
 
     run_save_qmrfs_selected_features(use_factorize_categorical=True)
-    # run_save_qmrfs_selected_features_isolet()
+    run_save_qmrfs_selected_features_isolet()
 
-    # run_save_baseline_selected_features(use_factorize_categorical=True)
-    # run_save_baseline_selected_features_isolet()
+    run_save_baseline_selected_features(use_factorize_categorical=True)
+    run_save_baseline_selected_features_isolet()
 
     # run_usfm_isolet_parallel()

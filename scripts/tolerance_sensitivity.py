@@ -6,15 +6,14 @@ import tqdm
 
 from qmrfs.experiments.classification import run_classification_experiment
 from qmrfs.experiments.clustering import run_clustering_experiment
-from qmrfs.qmr_feature_selection import TranslationMode
 
 
 def main_classification(*, sorting_strategy, seed: int, feature_order_seed: Optional[int],
-                        use_factorize_categorical: bool, feature_translation: TranslationMode):
+                        use_factorize_categorical: bool):
     if use_factorize_categorical:
-        folder = f"results/data/tol_sens/factorize/{feature_translation}/{sorting_strategy}"
+        folder = f"results/data/tol_sens/factorize/{sorting_strategy}"
     else:
-        folder = f"results/data/tol_sens/dummy/{feature_translation}/{sorting_strategy}"
+        folder = f"results/data/tol_sens/dummy/{sorting_strategy}"
 
     if 'random' in sorting_strategy:
         folder += f"_{feature_order_seed}"
@@ -26,8 +25,7 @@ def main_classification(*, sorting_strategy, seed: int, feature_order_seed: Opti
     for tol in tqdm.tqdm(tolerances):
         abs_results, _ = run_classification_experiment(tolerance=tol, sorting_strategy=sorting_strategy,
                                                        seed=seed, feature_order_seed=feature_order_seed,
-                                                       use_factorize_categorical=use_factorize_categorical,
-                                                       feature_translation=feature_translation)
+                                                       use_factorize_categorical=use_factorize_categorical)
         all_results.append(abs_results)
 
     all_results = pd.concat(all_results, axis=0, ignore_index=True)
@@ -35,11 +33,11 @@ def main_classification(*, sorting_strategy, seed: int, feature_order_seed: Opti
 
 
 def main_clustering(*, sorting_strategy, seed: int, feature_order_seed: Optional[int],
-                    use_factorize_categorical: bool, feature_translation: TranslationMode):
+                    use_factorize_categorical: bool):
     if use_factorize_categorical:
-        folder = f"results/data/tol_sens/factorize/{feature_translation}/{sorting_strategy}"
+        folder = f"results/data/tol_sens/factorize/{sorting_strategy}"
     else:
-        folder = f"results/data/tol_sens/dummy/{feature_translation}/{sorting_strategy}"
+        folder = f"results/data/tol_sens/dummy/{sorting_strategy}"
 
     if 'random' in sorting_strategy:
         folder += f"_{feature_order_seed}"
@@ -50,8 +48,7 @@ def main_clustering(*, sorting_strategy, seed: int, feature_order_seed: Optional
     for tol in tqdm.tqdm(tolerances):
         abs_results, _ = run_clustering_experiment(tolerance=tol, sorting_strategy=sorting_strategy,
                                                    seed=seed, feature_order_seed=feature_order_seed,
-                                                   use_factorize_categorical=use_factorize_categorical,
-                                                   feature_translation=feature_translation)
+                                                   use_factorize_categorical=use_factorize_categorical)
         all_results.append(abs_results)
 
     all_results = pd.concat(all_results, axis=0, ignore_index=True)
@@ -65,38 +62,33 @@ if __name__ == "__main__":
     feature_order_seed_3 = 92384234
     feature_order_seed_4 = 12352312
     feature_order_seed_5 = 8239423
-    # feature_translation: TranslationMode = 'centre'
 
-    for feature_translation in ['const-vector']:
-        for factorize in [True]:
-            main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_1,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_2,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_3,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_4,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_5,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_classification(sorting_strategy='default', seed=seed, feature_order_seed=None,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_classification(sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None,
-                                use_factorize_categorical=factorize, feature_translation=feature_translation)
-            # main_classification(sorting_strategy='entropy_low2high', seed=seed, feature_order_seed=None)
+    main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_1,
+                        use_factorize_categorical=True)
+    main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_2,
+                        use_factorize_categorical=True)
+    main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_3,
+                        use_factorize_categorical=True)
+    main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_4,
+                        use_factorize_categorical=True)
+    main_classification(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_5,
+                        use_factorize_categorical=True)
+    main_classification(sorting_strategy='default', seed=seed, feature_order_seed=None,
+                        use_factorize_categorical=True)
+    main_classification(sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None,
+                        use_factorize_categorical=True)
 
-            main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_1,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_2,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_3,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_4,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_5,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_clustering(sorting_strategy='default', seed=seed, feature_order_seed=None,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            main_clustering(sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None,
-                            use_factorize_categorical=factorize, feature_translation=feature_translation)
-            # main_clustering(sorting_strategy='entropy_low2high', seed=seed, feature_order_seed=None)
+    main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_1,
+                    use_factorize_categorical=True)
+    main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_2,
+                    use_factorize_categorical=True)
+    main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_3,
+                    use_factorize_categorical=True)
+    main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_4,
+                    use_factorize_categorical=True)
+    main_clustering(sorting_strategy='random', seed=seed, feature_order_seed=feature_order_seed_5,
+                    use_factorize_categorical=True)
+    main_clustering(sorting_strategy='default', seed=seed, feature_order_seed=None,
+                    use_factorize_categorical=True)
+    main_clustering(sorting_strategy='entropy_high2low', seed=seed, feature_order_seed=None,
+                    use_factorize_categorical=True)
