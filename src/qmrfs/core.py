@@ -31,11 +31,47 @@ def is_independent(pivot_norm: float, feature_norm: float, theta: float, num_can
     return a and b
 
 
-def qr2ref_with_M(features: torch.Tensor, theta: float):
+# def qr2ref_with_M(features: torch.Tensor, theta: float):
+#     device = features.device
+#     dtype = features.dtype
+#     recon_errors = []
+#     feature_norms = []
+#
+#     Q, Rref = torch.linalg.qr(features, mode='reduced')
+#     num_rows = Rref.shape[0]
+#     M = torch.eye(Rref.shape[0], dtype=Rref.dtype, device=device)
+#     pivot_row = 0
+#     for col in range(Rref.shape[1]):
+#         pivot_norm = calc_pivot_norm(Q, M, Rref, pivot_row, col)
+#         pivot_candidates_ = Rref[pivot_row:col + 1, col]
+#         feature_norm = torch.linalg.norm(features[:, col])
+#         if is_independent(pivot_norm, feature_norm, theta, len(pivot_candidates_), dtype):
+#             pivot_index = torch.argmax(torch.abs(pivot_candidates_))
+#             new_pivot_row = pivot_index + pivot_row
+#             # Switch place to that largest element is at the pivot row
+#             Rref = switch_rows(Rref, pivot_row, new_pivot_row)
+#             M = switch_cols(M, pivot_row, new_pivot_row)
+#
+#             reduction_ratios = (Rref[pivot_row + 1:min(col + 1, num_rows), col] / Rref[pivot_row, col])
+#             Rref[pivot_row + 1:min(col + 1, num_rows), :] -= torch.outer(reduction_ratios, Rref[pivot_row, :])
+#             M[:, pivot_row] += torch.einsum('ij,j->i', M[:, pivot_row + 1:min(col + 1, num_rows)], reduction_ratios)
+#
+#             pivot_row += 1
+#         else:
+#             recon_errors.append(pivot_norm.item())
+#             feature_norms.append(feature_norm.item())
+#         # Set small elements to zeros
+#         Rref[pivot_row:, col] = torch.zeros(Rref.shape[0] - pivot_row, dtype=dtype, device=device)
+#
+#     return Rref, M, recon_errors, feature_norms
+
+
+def qmr_fs_core(features: torch.Tensor, theta: float):
     device = features.device
     dtype = features.dtype
     recon_errors = []
     feature_norms = []
+    column_mask = torch.zeros(features.shape[1], dtype=torch.bool, device=features.device)
 
     Q, Rref = torch.linalg.qr(features, mode='reduced')
     num_rows = Rref.shape[0]
@@ -57,36 +93,38 @@ def qr2ref_with_M(features: torch.Tensor, theta: float):
             M[:, pivot_row] += torch.einsum('ij,j->i', M[:, pivot_row + 1:min(col + 1, num_rows)], reduction_ratios)
 
             pivot_row += 1
+            column_mask[col] = 1
         else:
             recon_errors.append(pivot_norm.item())
             feature_norms.append(feature_norm.item())
-        # Set small elements to zeros
+        # Set small elements to zeros. Done also if column is kept to remove rounding errors.
         Rref[pivot_row:, col] = torch.zeros(Rref.shape[0] - pivot_row, dtype=dtype, device=device)
 
-    return Rref, M, recon_errors, feature_norms
+    return column_mask, Q, M, Rref, recon_errors, feature_norms
 
 
-def get_pivot_columns(matrix: torch.Tensor):
-    is_pivot_column = torch.zeros(matrix.shape[1], dtype=torch.bool, device=matrix.device)
-    eps = 1e-15 if matrix.dtype == torch.float64 else 1e-6
-    for i in range(matrix.shape[0]):
-        pivot_candidates = (torch.abs(matrix[i]) > eps).to(torch.int8)
-        if torch.any(pivot_candidates):
-            pivot_column = torch.argmax(pivot_candidates)
-            is_pivot_column[pivot_column] = 1
-    return is_pivot_column
+# def get_pivot_columns(matrix: torch.Tensor):
+#     is_pivot_column = torch.zeros(matrix.shape[1], dtype=torch.bool, device=matrix.device)
+#     eps = 1e-15 if matrix.dtype == torch.float64 else 1e-6
+#     for i in range(matrix.shape[0]):
+#         pivot_candidates = (torch.abs(matrix[i]) > eps).to(torch.int8)
+#         if torch.any(pivot_candidates):
+#             pivot_column = torch.argmax(pivot_candidates)
+#             is_pivot_column[pivot_column] = 1
+#     return is_pivot_column
 
 
 def get_keep_columns_qr(features: torch.Tensor, tolerance: float):
     if tolerance < 0:
-        columns_to_keep = torch.ones(features.shape[1], dtype=torch.bool, device=features.device)
+        column_mask = torch.ones(features.shape[1], dtype=torch.bool, device=features.device)
         recon_errors = []
         feature_norms = []
     else:
-        rref, M, recon_errors, feature_norms = qr2ref_with_M(features, theta=tolerance)
-        columns_to_keep = get_pivot_columns(rref)
+        # rref, M, recon_errors, feature_norms = qr2ref_with_M(features, theta=tolerance)
+        # columns_to_keep = get_pivot_columns(rref)
+        column_mask, Q, M, Rref, recon_errors, feature_norms = qmr_fs_core(features, theta=tolerance)
 
-    return columns_to_keep, recon_errors, feature_norms
+    return column_mask, recon_errors, feature_norms
 
 
 @nb.jit(nb.types.Tuple((nb.int64[::1], nb.float32[::1]))(nb.float32[:, :]), nopython=True, nogil=True, parallel=True)
