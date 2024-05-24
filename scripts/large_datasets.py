@@ -110,7 +110,6 @@ def time_fs(X_data, device: Optional[torch.device]):
             X_data,
             tolerance=1e-1,
             sorting_strategy='entropy_high2low',
-            feature_translation='const-vector',
             seed=None,
             device=device
         )
