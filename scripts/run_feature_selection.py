@@ -1,4 +1,5 @@
 import os
+import argparse
 import time
 import tqdm
 import numpy as np
@@ -159,12 +160,22 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
 
 
 if __name__ == "__main__":
-    save_datafiles_as_mat()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save-data", action='store_true')
+    parser.add_argument("--qmrfs", action='store_true')
+    parser.add_argument("--baselines", action='store_true')
+    parser.add_argument("--usfm-parallel", action='store_true')
+    args = parser.parse_args()
+    if args.save_data:
+        save_datafiles_as_mat()
 
-    run_save_qmrfs_selected_features(use_factorize_categorical=True)
-    run_save_qmrfs_selected_features_isolet()
+    if args.qmrfs:
+        run_save_qmrfs_selected_features(use_factorize_categorical=True)
+        run_save_qmrfs_selected_features_isolet()
 
-    run_save_baseline_selected_features(use_factorize_categorical=True)
-    run_save_baseline_selected_features_isolet()
+    if args.baselines:
+        run_save_baseline_selected_features(use_factorize_categorical=True)
+        run_save_baseline_selected_features_isolet()
 
-    # run_usfm_isolet_parallel()
+    if args.usfm_parallel:
+        run_usfm_isolet_parallel()
