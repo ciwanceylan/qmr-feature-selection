@@ -33,8 +33,8 @@ def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'
         }
     }
     data = pd.read_json(f"./results/data/main_experiment/{cat_pp_mode}/{mode}.json")
-
-    # data = data.loc[(data['dim_ratio'] < 0.99) & (data['dim_ratio'] > 0.18)].copy()
+    datafilter = (((data["dataset"] == 'isolet') & (data['red_dim'] >= 19)) | ((data["dataset"] != 'isolet') & (data['dim_ratio'] >= 0.18)))
+    data = data.loc[datafilter].copy()
     data['method'] = data['method'].map(lambda x: x[0] if isinstance(x, list) else x)
     data['percent_dim_kept'] = 100 * data['dim_ratio']
 
@@ -105,7 +105,6 @@ if __name__ == "__main__":
     methods = ["baseline_full", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
     make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
     make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
-    #
 
     methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
     resproc.make_comparison_table(datasets=datasets, methods=methods)

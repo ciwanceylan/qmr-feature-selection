@@ -448,8 +448,11 @@ def get_isolet_times(isolet_durations: pd.Series, methods: List[str]):
         if method == "qmrfs":
             out += f" & {timeformat(qmrfs_time)}"
         else:
-            ratio = int(np.round(isolet_durations[method].item() / qmrfs_time))
-            out += f" & " + r"$\times" + f"{ratio}$"
+            ratio = isolet_durations[method].item() / qmrfs_time
+            if ratio >= 10:
+                out += f" & " + r"$\times" + f"{int(np.round(ratio))}$"
+            else:
+                out += f" & " + r"$\times" + f"{ratio:.1f}$"
     out += r"\\" + "\n"
     return out
 
