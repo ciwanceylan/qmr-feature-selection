@@ -442,7 +442,7 @@ def timeformat(duration: float):
 
 
 def get_isolet_times(isolet_durations: pd.Series, methods: List[str]):
-    out = "Run time (Isolet)"
+    out = "Runtime (Isolet)"
     qmrfs_time = isolet_durations['qmrfs'].item()
     for method in methods:
         if method == "qmrfs":

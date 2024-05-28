@@ -49,14 +49,14 @@ def make_dim_ratio_comparison_plots(mode: Literal['classification', 'clustering'
         if dataset_name == 'isolet':
             fig, ax = resproc.lineplot(
                 plt_data, x="red_dim", x_label=r"\# features kept", y=y, y_label=y_label, x_lim=(19, 105),
-                hue="method", errorbar="sd", legend_order=methods, fontsize_legend=34, fontsize=48,
+                hue="method", errorbar="se", legend_order=methods, fontsize_legend=34, fontsize=48,
                 save_path=os.path.join(save_folder, mode), seperate_legend=True, baseline_method='baseline_full'
             )
             plt.close(fig)
         else:
             fig, ax = resproc.lineplot(
                 plt_data, x="percent_dim_kept", x_label=r"\% features kept", y=y, y_label=y_label, x_lim=(18, 100),
-                y_lim=y_lims[mode].get(dataset_name, None), hue="method", errorbar="sd", legend_order=methods,
+                y_lim=y_lims[mode].get(dataset_name, None), hue="method", errorbar="se", legend_order=methods,
                 fontsize_legend=34, fontsize=48,
                 save_path=os.path.join(save_folder, mode), seperate_legend=True, baseline_method='baseline_full'
             )
