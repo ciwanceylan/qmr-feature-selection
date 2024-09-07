@@ -10,6 +10,7 @@ from qmrfs.experiments.utils import DATASET_INFO, DATA_CACHE_LOCATION, load_data
 from qmrfs.baselines.svd_entropy import svd_entropy_sr
 from qmrfs.baselines.usfsm import usfsm, usfsm_
 import qmrfs.qmr_feature_selection as qmrfs
+import qmrfs.qrp_feature_selection as qprfs
 
 
 def select_k_from_ranking(features: np.ndarray, feat_ranking: np.ndarray, k: int):
@@ -159,10 +160,63 @@ def run_save_qmrfs_selected_features(use_factorize_categorical: bool):
             savemat(os.path.join(save_folder, f"features_{int(1000 * tol)}.mat"), res)
 
 
+def run_save_qrpfs_selected_features_isolet():
+    models = {"qrpfs": qprfs.qrp_fs}
+
+    for model_name, model in tqdm.tqdm(models.items()):
+        save_folder = os.path.join(f"baseline_features/isolet/{model_name}")
+        os.makedirs(save_folder, exist_ok=True)
+        X_data, y = load_isolet()
+        kvals = np.linspace(20, 100, 9).astype(np.int32)
+        print(kvals)
+        for k in tqdm.tqdm(kvals):
+            start = time.perf_counter()
+            pruned_x, _ = model(X_data, k, sorting_strategy='entropy_high2low')
+            duration = time.perf_counter() - start
+            res = {
+                "X_red": pruned_x,
+                "dataset": 'isolet',
+                "method": model_name,
+                "duration": duration,
+                "num_feat": X_data.shape[1],
+                "num_red_feat": pruned_x.shape[1],
+                "feat_ratio": pruned_x.shape[1] / X_data.shape[1],
+            }
+            savemat(os.path.join(save_folder, f"features_{k}.mat"), res)
+
+
+def run_save_qrpfs_selected_features(use_factorize_categorical: bool):
+    models = {"qrpfs": qprfs.qrp_fs}
+    for dataset, info in tqdm.tqdm(DATASET_INFO.items(), total=len(DATASET_INFO)):
+        for model_name, model in tqdm.tqdm(models.items()):
+            if use_factorize_categorical:
+                save_folder = os.path.join(f"baseline_features/{info.uci_id}/factorize/{model_name}")
+            else:
+                save_folder = os.path.join(f"baseline_features/{info.uci_id}/dummy/{model_name}")
+            os.makedirs(save_folder, exist_ok=True)
+            X_data, X_orig, y = load_dataset(info.uci_id, use_factorize_categorical=use_factorize_categorical)
+            for p in np.arange(0.2, 1., 0.1):
+                k = int(np.round(p * X_data.shape[1]))
+                start = time.perf_counter()
+                pruned_x, _ = model(X_data, k, sorting_strategy='entropy_high2low')
+                duration = time.perf_counter() - start
+                res = {
+                    "X_red": pruned_x,
+                    "dataset": dataset,
+                    "method": model_name,
+                    "duration": duration,
+                    "num_feat": X_data.shape[1],
+                    "num_red_feat": pruned_x.shape[1],
+                    "feat_ratio": pruned_x.shape[1] / X_data.shape[1],
+                }
+                savemat(os.path.join(save_folder, f"features_{int(100 * p)}.mat"), res)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save-data", action='store_true')
     parser.add_argument("--qmrfs", action='store_true')
+    parser.add_argument("--qrpfs", action='store_true')
     parser.add_argument("--baselines", action='store_true')
     parser.add_argument("--usfm-parallel", action='store_true')
     args = parser.parse_args()
@@ -172,6 +226,10 @@ if __name__ == "__main__":
     if args.qmrfs:
         run_save_qmrfs_selected_features(use_factorize_categorical=True)
         run_save_qmrfs_selected_features_isolet()
+
+    if args.qrpfs:
+        run_save_qrpfs_selected_features(use_factorize_categorical=True)
+        run_save_qrpfs_selected_features_isolet()
 
     if args.baselines:
         run_save_baseline_selected_features(use_factorize_categorical=True)

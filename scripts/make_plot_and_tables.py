@@ -102,11 +102,11 @@ if __name__ == "__main__":
                 "wine",
                 "isolet"]
 
-    methods = ["baseline_full", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    methods = ["baseline_full", "qrpfs", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
     make_dim_ratio_comparison_plots(mode='classification', cat_pp_mode='factorize', methods=methods)
     make_dim_ratio_comparison_plots(mode='clustering', cat_pp_mode='factorize', methods=methods)
 
-    methods = ["qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
+    methods = ["qrpfs", "qmrfs", "svd_entropy", "ls", "spec", "usfsm", "udfs", "ndfs", "cnafs", "fmiufs"]
     resproc.make_comparison_table(datasets=datasets, methods=methods)
 
     # plot_tol_sens_sorting('classification', cat_pp_mode='factorize', translate_mode='const-vector',

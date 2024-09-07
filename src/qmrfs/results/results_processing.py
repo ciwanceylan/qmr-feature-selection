@@ -18,6 +18,7 @@ from qmrfs.experiments.utils import DATASET_INFO
 
 PRETTY_METHOD_NAMES = {
     'baseline_full': "Baseline",
+    "qrpfs": "QRP-FS",
     "qmrfs": "QMR-FS",
     "svd_entropy": "SVD Ent.",
     "ls": "LS",
@@ -410,6 +411,7 @@ def method_complexities(methods):
 
     complexities = {
         "qmrfs": r"$\bigO(n d^2)$",
+        "qrpfs": r"$\bigO(n d^2)$",
         "svd_entropy": r"$\bigO(n d^3)$",
         "ls": r"$\bigO(n^2 d)$",
         "spec": r"$\bigO(n^2 d)$",
