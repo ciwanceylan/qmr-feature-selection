@@ -4,7 +4,7 @@ Select linearly independent features using the QMR decomposition.
 
 ## Install
 
-First install dependencies, either the pip `requirements.txt` file, or the conda `environment.yml` file.
+First, install the dependencies. You can use either the pip `requirements.txt` file, or the conda `environment.yml` file.
 The file `requirements.txt` is minimalistic, containing only the packages needed to run QMR-FS and the experiments.
 The conda file also contains plotting libraries, jupyterlab, and some libraries to make Numba faster.
 
