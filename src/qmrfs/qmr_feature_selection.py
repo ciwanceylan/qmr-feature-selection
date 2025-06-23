@@ -26,7 +26,7 @@ class QMRFeatureSelector:
         self.feature_norms_ = np.asarray(feature_norms)
 
         pruned_features = features[:, columns_to_keep_mask]
-        return pruned_features, columns_to_keep_mask
+        return pruned_features, columns_to_keep_mask[1:]
 
 
 def compute_orthogonality_scores(features: torch.Tensor):
